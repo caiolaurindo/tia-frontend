@@ -4,13 +4,14 @@ import { AuthMode, LoginFormData, LoginFormErrors } from "../types/auth.types";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface UseLoginFormOptions {
+  initialMode?: AuthMode;
   onLoginSuccess?: (data: LoginFormData) => void;
   onRegisterTabSelect?: () => void;
   onForgotPasswordPress?: () => void;
 }
 
 export function useLoginForm(options?: UseLoginFormOptions) {
-  const [mode, setMode] = useState<AuthMode>("login");
+  const [mode, setMode] = useState<AuthMode>(options?.initialMode ?? "login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<LoginFormErrors>({});

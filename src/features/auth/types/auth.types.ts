@@ -9,3 +9,17 @@ export interface LoginFormErrors {
   email?: string;
   password?: string;
 }
+
+export interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface RegisterFormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+}

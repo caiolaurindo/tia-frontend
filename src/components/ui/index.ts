@@ -4,3 +4,7 @@ export * from "./segmented-control";
 export * from "./text-field";
 export * from "./button";
 export * from "./info-banner";
+export * from "./badge";
+export * from "./avatar-initials";
+export * from "./search-bar";
+export * from "./card";

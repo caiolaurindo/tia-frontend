@@ -1,11 +1,12 @@
 import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { AulasProvider } from "@/features/aulas";
 import { colors } from "@/theme";
 
 export default function RootLayout() {
   return (
-    <>
+    <AulasProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -13,6 +14,6 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background.primary },
         }}
       />
-    </>
+    </AulasProvider>
   );
 }
