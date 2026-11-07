@@ -8,6 +8,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "@/theme";
 import { AppHeader } from "./app-header";
@@ -36,6 +37,22 @@ export function AppShell({
   showBottomBar = true,
   contentContainerStyle,
 }: AppShellProps) {
+  const router = useRouter();
+
+  const handleTabPress = (tab: BottomTabKey) => {
+    if (onTabPress) {
+      onTabPress(tab);
+      return;
+    }
+
+    if (tab === activeTab) return;
+
+    // As demais abas entram aqui conforme as telas forem sendo criadas.
+    if (tab === "conquistas") {
+      router.push("/conquistas");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <View style={styles.frame}>
@@ -64,7 +81,7 @@ export function AppShell({
         {showBottomBar ? (
           <BottomTabBar
             activeTab={activeTab}
-            onTabPress={onTabPress}
+            onTabPress={handleTabPress}
             onPrimaryActionPress={onPrimaryActionPress}
           />
         ) : null}
