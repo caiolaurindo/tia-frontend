@@ -83,8 +83,8 @@ Neste momento, a aplicação exibe somente uma tela inicial de desenvolvimento. 
 
 ## Tecnologias
 
-- [Expo](https://expo.dev/) SDK 57;
-- [React Native](https://reactnative.dev/) 0.86;
+- [Expo](https://expo.dev/) SDK 58;
+- [React Native](https://reactnative.dev/) 0.88;
 - [React](https://react.dev/) 19;
 - [TypeScript](https://www.typescriptlang.org/) com modo estrito;
 - [Expo Router](https://docs.expo.dev/router/introduction/) para rotas baseadas em arquivos;
