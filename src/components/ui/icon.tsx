@@ -30,7 +30,8 @@ export type IconName =
   | "clock"
   | "edit"
   | "close"
-  | "sparkles";
+  | "sparkles"
+  | "more";
 
 interface SymbolMapping {
   ios: SFSymbol;
@@ -173,6 +174,11 @@ const ICON_MAP: Record<IconName, SymbolMapping> = {
     ios: "sparkles",
     android: "auto_awesome",
     web: "auto_awesome",
+  },
+  more: {
+    ios: "ellipsis",
+    android: "more_horiz",
+    web: "more_horiz",
   },
 };
 

@@ -8,7 +8,7 @@ export type BottomTabKey =
   | "turmas"
   | "registrar"
   | "alunos"
-  | "relatorio";
+  | "conquistas";
 
 export interface BottomTabBarProps {
   activeTab?: BottomTabKey;
@@ -28,7 +28,7 @@ const TABS: TabItemConfig[] = [
   { key: "turmas", label: "Turmas", icon: "groups" },
   { key: "registrar", label: "Registrar", icon: "plus", isPrimary: true },
   { key: "alunos", label: "Alunos", icon: "user" },
-  { key: "relatorio", label: "Relatório", icon: "chart" },
+  { key: "conquistas", label: "Conquistas", icon: "trophy" },
 ];
 
 export function BottomTabBar({
