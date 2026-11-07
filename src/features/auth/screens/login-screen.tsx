@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
 import { StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/layout";
 import {
   InfoBanner,
@@ -24,8 +25,20 @@ export interface LoginScreenProps {
 }
 
 export function LoginScreen({ initialMode = "login" }: LoginScreenProps) {
-  const loginForm = useLoginForm({ initialMode });
-  const registerForm = useRegisterForm();
+  const router = useRouter();
+
+  const loginForm = useLoginForm({
+    initialMode,
+    onLoginSuccess: () => {
+      router.replace("/aulas");
+    },
+  });
+
+  const registerForm = useRegisterForm({
+    onRegisterSuccess: () => {
+      router.replace("/aulas");
+    },
+  });
 
   const { mode, handleModeChange } = loginForm;
   const { resetErrors: resetRegisterErrors } = registerForm;
