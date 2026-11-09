@@ -1,0 +1,1 @@
+export { TurmasListScreen } from "./screens/turmas-list-screen";

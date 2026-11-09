@@ -51,6 +51,10 @@ export function AppShell({
     if (tab === "conquistas") {
       router.push("/conquistas");
     }
+    if (tab === "turmas") {
+      router.push("/turmas");
+      return;
+    }
   };
 
   return (
