@@ -16,12 +16,6 @@ import { colors, spacing, radii } from "@/theme";
 
 import { useTurmasContext } from "../context/turmas-context";
 
-const etapas = [
-  "Educação Infantil",
-  "Ensino Fundamental",
-  "Ensino Médio",
-];
-
 const turnos = ["Manhã", "Tarde", "Noite"];
 
 export function TurmaFormScreen() {
@@ -29,20 +23,36 @@ export function TurmaFormScreen() {
   const { createTurma } = useTurmasContext();
 
   const [nome, setNome] = useState("");
-  const [etapa, setEtapa] = useState("");
+  const [serie, setSerie] = useState("");
+  const [anoLetivo, setAnoLetivo] = useState("2026");
+  const [faixaEtaria, setFaixaEtaria] = useState("");
   const [turno, setTurno] = useState("");
-  const [quantidadeAlunos, setQuantidadeAlunos] = useState("");
+  const [descricao, setDescricao] = useState("");
 
   function handleSave() {
-    const quantidade = Number(quantidadeAlunos);
+    const ano = Number(anoLetivo);
 
     if (!nome.trim()) {
       Alert.alert("Atenção", "Informe o nome da turma.");
       return;
     }
 
-    if (!etapa) {
-      Alert.alert("Atenção", "Selecione a etapa de ensino.");
+    if (!serie.trim()) {
+      Alert.alert("Atenção", "Informe a série da turma.");
+      return;
+    }
+
+    if (
+      !anoLetivo.trim() ||
+      !Number.isInteger(ano) ||
+      ano < 2000
+    ) {
+      Alert.alert("Atenção", "Informe um ano letivo válido.");
+      return;
+    }
+
+    if (!faixaEtaria.trim()) {
+      Alert.alert("Atenção", "Informe a faixa etária.");
       return;
     }
 
@@ -51,23 +61,13 @@ export function TurmaFormScreen() {
       return;
     }
 
-    if (
-      !quantidadeAlunos.trim() ||
-      !Number.isInteger(quantidade) ||
-      quantidade <= 0
-    ) {
-      Alert.alert(
-        "Atenção",
-        "Informe uma quantidade de alunos válida."
-      );
-      return;
-    }
-
     createTurma({
       nome: nome.trim(),
-      etapa,
+      serie: serie.trim(),
+      anoLetivo: ano,
+      faixaEtaria: faixaEtaria.trim(),
       turno,
-      quantidadeAlunos: quantidade,
+      descricao: descricao.trim(),
     });
 
     Alert.alert("Sucesso", "Turma cadastrada com sucesso!", [
@@ -93,7 +93,42 @@ export function TurmaFormScreen() {
           <TextInput
             value={nome}
             onChangeText={setNome}
-            placeholder="Ex.: Turma 1º Ano A"
+            placeholder="Ex.: Turma A"
+            placeholderTextColor={colors.text.placeholder}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Série</Text>
+          <TextInput
+            value={serie}
+            onChangeText={setSerie}
+            placeholder="Ex.: 5º ano"
+            placeholderTextColor={colors.text.placeholder}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Ano letivo</Text>
+          <TextInput
+            value={anoLetivo}
+            onChangeText={setAnoLetivo}
+            placeholder="Ex.: 2026"
+            placeholderTextColor={colors.text.placeholder}
+            keyboardType="number-pad"
+            maxLength={4}
+            style={styles.input}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Faixa etária</Text>
+          <TextInput
+            value={faixaEtaria}
+            onChangeText={setFaixaEtaria}
+            placeholder="Ex.: 10 a 11 anos"
             placeholderTextColor={colors.text.placeholder}
             style={styles.input}
           />
@@ -131,14 +166,16 @@ export function TurmaFormScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Quantidade de alunos</Text>
+          <Text style={styles.label}>Descrição (opcional)</Text>
           <TextInput
-            value={quantidadeAlunos}
-            onChangeText={setQuantidadeAlunos}
-            placeholder="Ex.: 25"
+            value={descricao}
+            onChangeText={setDescricao}
+            placeholder="Adicione informações sobre a turma..."
             placeholderTextColor={colors.text.placeholder}
-            keyboardType="number-pad"
-            style={styles.input}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            style={[styles.input, styles.textArea]}
           />
         </View>
 
@@ -191,7 +228,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 48,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: colors.border.default,
     borderRadius: radii.md,
@@ -199,6 +236,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     fontSize: 14,
     color: colors.text.primary,
+  },
+
+  textArea: {
+    minHeight: 100,
+    paddingTop: spacing.md,
   },
 
   options: {
