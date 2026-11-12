@@ -47,14 +47,31 @@ export function AppShell({
 
     if (tab === activeTab) return;
 
-    // As demais abas entram aqui conforme as telas forem sendo criadas.
-    if (tab === "conquistas") {
-      router.push("/conquistas");
+    // Adicionamos as rotas para cada aba da barra inferior:
+    if (tab === "registrar") {
+      router.push("/registros/novo");
+      return;
+    }
+    if (tab === "inicio") {
+      router.push("/");
+      return;
     }
     if (tab === "turmas") {
       router.push("/turmas");
       return;
     }
+    if (tab === "conquistas") {
+      router.push("/conquistas");
+      return;
+    }
+  };
+
+  const handlePrimaryAction = () => {
+    if (onPrimaryActionPress) {
+      onPrimaryActionPress();
+      return;
+    }
+    router.push("/registros/novo");
   };
 
   return (
@@ -86,7 +103,7 @@ export function AppShell({
           <BottomTabBar
             activeTab={activeTab}
             onTabPress={handleTabPress}
-            onPrimaryActionPress={onPrimaryActionPress}
+            onPrimaryActionPress={handlePrimaryAction}
           />
         ) : null}
       </View>
