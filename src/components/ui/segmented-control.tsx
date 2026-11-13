@@ -55,6 +55,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: colors.background.muted,
     borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.border.default,
     padding: spacing.xs,
   },
   tab: {
@@ -66,7 +68,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   activeTab: {
-    backgroundColor: colors.background.surface,
+    backgroundColor: colors.brand.navy,
     ...shadows.sm,
   },
   tabText: {
@@ -75,6 +77,6 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     ...typography.tabActive,
-    color: colors.text.primary,
+    color: colors.text.inverse,
   },
 });

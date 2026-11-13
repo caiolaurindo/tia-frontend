@@ -19,6 +19,8 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background.infoBanner,
     borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: colors.brand.primaryLight,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     alignItems: "center",
@@ -27,6 +29,7 @@ const styles = StyleSheet.create({
   text: {
     ...typography.banner,
     color: colors.text.banner,
+    fontWeight: "600",
     textAlign: "center",
   },
 });

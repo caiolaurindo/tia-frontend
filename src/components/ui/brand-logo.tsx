@@ -1,17 +1,24 @@
 import React from "react";
-import { StyleSheet, Text, View, ViewStyle, StyleProp } from "react-native";
-import { colors, radii, spacing, typography } from "@/theme";
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Image } from "expo-image";
+import { colors, spacing, typography } from "@/theme";
+
+const TIA_ICON_LOGO = require("../../../public/ID-VISUAL-TIA/Group 6.svg");
 
 export interface BrandLogoProps {
   style?: StyleProp<ViewStyle>;
+  size?: number;
 }
 
-export function BrandLogo({ style }: BrandLogoProps) {
+export function BrandLogo({ style, size = 48 }: BrandLogoProps) {
   return (
     <View style={[styles.container, style]} accessibilityRole="header">
-      <View style={styles.badge}>
-        <Text style={styles.badgeLetter}>T</Text>
-      </View>
+      <Image
+        source={TIA_ICON_LOGO}
+        style={{ width: size, height: size }}
+        contentFit="contain"
+        accessibilityLabel="Logo da TIA"
+      />
       <View style={styles.textContainer}>
         <Text style={styles.title}>TIA</Text>
         <Text style={styles.subtitle}>Teaching Intelligent Assistant</Text>
@@ -25,20 +32,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-  },
-  badge: {
-    width: 46,
-    height: 46,
-    borderRadius: radii.xl,
-    backgroundColor: colors.brand.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeLetter: {
-    color: colors.text.inverse,
-    fontSize: 22,
-    fontWeight: "700",
-    lineHeight: 26,
   },
   textContainer: {
     justifyContent: "center",

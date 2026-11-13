@@ -79,11 +79,11 @@ export function LiveLessonBanner({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.brand.primary,
+    backgroundColor: colors.brand.navy,
     borderRadius: radii.xxl,
     padding: spacing.lg,
     gap: spacing.xs,
-    ...shadows.button,
+    ...shadows.sm,
   },
   statusRow: {
     flexDirection: "row",
@@ -91,15 +91,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   liveDot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: radii.full,
   },
   activeDot: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.brand.yellow,
   },
   pausedDot: {
-    backgroundColor: "#FDE047",
+    backgroundColor: colors.brand.coral,
   },
   statusText: {
     fontSize: 10,

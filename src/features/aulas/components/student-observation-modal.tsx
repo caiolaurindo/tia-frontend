@@ -38,8 +38,8 @@ const OBSERVATION_PILLS: {
     type: "participacao",
     label: "Participou oralmente",
     icon: "hand",
-    color: "#2563EB",
-    bg: "#DBEAFE",
+    color: colors.brand.primary,
+    bg: "#E3ECFF",
   },
   {
     type: "atividade",
@@ -52,15 +52,15 @@ const OBSERVATION_PILLS: {
     type: "dificuldade",
     label: "Apresentou dificuldade",
     icon: "alert",
-    color: "#DC2626",
-    bg: "#FEE2E2",
+    color: colors.text.danger,
+    bg: "#FFE8E7",
   },
   {
     type: "conquista",
     label: "Demonstrou conquista",
     icon: "trophy",
-    color: "#D97706",
-    bg: "#FEF3C7",
+    color: "#B47A00",
+    bg: "#FFF4D6",
   },
 ];
 

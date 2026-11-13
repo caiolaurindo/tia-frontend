@@ -1,7 +1,10 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { Icon } from "@/components/ui";
 import { colors, radii, spacing } from "@/theme";
+
+const TIA_ICON_LOGO = require("../../../public/ID-VISUAL-TIA/Group 6.svg");
 
 export interface AppHeaderProps {
   title: string;
@@ -36,11 +39,15 @@ export function AppHeader({
         <Pressable
           onPress={onLogoPress}
           disabled={!onLogoPress}
-          style={styles.logoBadge}
+          style={styles.logoButton}
           accessibilityRole="button"
           accessibilityLabel="TIA Início"
         >
-          <Text style={styles.logoLetter}>T</Text>
+          <Image
+            source={TIA_ICON_LOGO}
+            style={styles.logoImage}
+            contentFit="contain"
+          />
         </Pressable>
       </View>
 
@@ -87,24 +94,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.lg,
-    backgroundColor: colors.brand.primary,
+  logoButton: {
+    width: 38,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
   },
-  logoLetter: {
-    color: colors.text.inverse,
-    fontSize: 18,
-    fontWeight: "800",
+  logoImage: {
+    width: 38,
+    height: 38,
   },
   title: {
     flex: 1,
     textAlign: "center",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.text.primary,
     paddingHorizontal: spacing.sm,
   },
@@ -123,6 +127,6 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: radii.full,
-    backgroundColor: colors.status.error,
+    backgroundColor: colors.brand.coral,
   },
 });

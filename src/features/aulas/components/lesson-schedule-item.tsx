@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   rowSelected: {
     borderColor: colors.brand.primaryLight,
-    backgroundColor: "#F4F8FF",
+    backgroundColor: colors.brand.primarySoft,
   },
   rowPressed: {
     opacity: 0.85,

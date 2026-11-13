@@ -66,7 +66,7 @@ export function AulaSummaryScreen() {
 
       <View style={styles.metricsGrid}>
         <Card style={styles.metricBox}>
-          <Icon name="hand" size={20} color="#2563EB" />
+          <Icon name="hand" size={20} color={colors.brand.primary} />
           <Text style={styles.metricNumber}>{stats.participations}</Text>
           <Text style={styles.metricLabel}>Participações</Text>
         </Card>
@@ -78,7 +78,7 @@ export function AulaSummaryScreen() {
         </Card>
 
         <Card style={styles.metricBox}>
-          <Icon name="trophy" size={20} color="#D97706" />
+          <Icon name="trophy" size={20} color={colors.brand.yellow} />
           <Text style={styles.metricNumber}>
             {stats.achievements.length + 6}
           </Text>
@@ -86,7 +86,7 @@ export function AulaSummaryScreen() {
         </Card>
 
         <Card style={styles.metricBox}>
-          <Icon name="alert" size={20} color="#DC2626" />
+          <Icon name="alert" size={20} color={colors.brand.coral} />
           <Text style={styles.metricNumber}>{stats.difficulties.length}</Text>
           <Text style={styles.metricLabel}>Pontos de atenção</Text>
         </Card>
