@@ -1,13 +1,8 @@
-
 import React from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Card, Badge } from "@/components/ui";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { colors, spacing } from "@/theme";
 
 import { Turma } from "../types/turmas.types";
@@ -18,40 +13,36 @@ interface TurmaCardProps {
 }
 
 export function TurmaCard({ turma, onPress }: TurmaCardProps) {
-  const isAtiva = turma.status === "ativa";
-
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
+    <Pressable onPress={onPress}>
       <Card style={styles.card}>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>{turma.nome}</Text>
             <Text style={styles.subtitle}>
-              Toque para visualizar os detalhes
+              {turma.serie} • {turma.anoLetivo}
             </Text>
           </View>
 
           <Badge
-            label={isAtiva ? "Ativa" : "Arquivada"}
-            variant={isAtiva ? "green" : "slate"}
+            label={turma.status === "ativa" ? "Ativa" : "Arquivada"}
+            variant={turma.status === "ativa" ? "green" : "slate"}
           />
         </View>
 
-        <View style={styles.divider} />
+        <View style={styles.details}>
+          <Text style={styles.detail}>
+            Turno: {turma.turno}
+          </Text>
 
-        <View style={styles.footer}>
-          <View>
-            <Text style={styles.infoLabel}>Turno</Text>
-            <Text style={styles.infoValue}>{turma.turno}</Text>
-          </View>
-
-          <View>
-            <Text style={styles.infoLabel}>Alunos</Text>
-            <Text style={styles.infoValue}>
-              {turma.quantidadeAlunos}
-            </Text>
-          </View>
+          <Text style={styles.detail}>
+            Faixa etária: {turma.faixaEtaria}
+          </Text>
         </View>
+
+        {turma.descricao ? (
+          <Text style={styles.description}>{turma.descricao}</Text>
+        ) : null}
       </Card>
     </Pressable>
   );
@@ -61,49 +52,35 @@ const styles = StyleSheet.create({
   card: {
     gap: spacing.md,
   },
-
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: spacing.sm,
   },
-
   titleContainer: {
     flex: 1,
     gap: spacing.xs,
   },
-
   title: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: colors.text.primary,
   },
-
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.text.secondary,
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: colors.border.subtle,
+  details: {
+    gap: spacing.xs,
   },
-
-  footer: {
-    flexDirection: "row",
-    gap: spacing.xxxl,
-  },
-
-  infoLabel: {
-    fontSize: 12,
+  detail: {
+    fontSize: 13,
     color: colors.text.secondary,
-    marginBottom: spacing.xxs,
   },
-
-  infoValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text.primary,
+  description: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    lineHeight: 19,
   },
 });

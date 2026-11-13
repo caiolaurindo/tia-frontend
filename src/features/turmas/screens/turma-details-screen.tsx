@@ -71,16 +71,31 @@ export function TurmaDetailsScreen() {
         </View>
 
         <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Série</Text>
+          <Text style={styles.infoValue}>{turma.serie}</Text>
+        </View>
+
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Ano letivo</Text>
+          <Text style={styles.infoValue}>{turma.anoLetivo}</Text>
+        </View>
+
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>Faixa etária</Text>
+          <Text style={styles.infoValue}>{turma.faixaEtaria}</Text>
+        </View>
+
+        <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Turno</Text>
           <Text style={styles.infoValue}>{turma.turno}</Text>
         </View>
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Quantidade de alunos</Text>
-          <Text style={styles.infoValue}>
-            {turma.quantidadeAlunos}
-          </Text>
-        </View>
+        {turma.descricao ? (
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Descrição</Text>
+            <Text style={styles.infoValue}>{turma.descricao}</Text>
+          </View>
+        ) : null}
       </Card>
 
       <View style={styles.actions}>
