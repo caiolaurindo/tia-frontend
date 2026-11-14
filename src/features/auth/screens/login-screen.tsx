@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/layout";
 import {
@@ -7,7 +7,7 @@ import {
   SegmentedControl,
   SegmentedOption,
 } from "@/components/ui";
-import { spacing } from "@/theme";
+import { colors, radii, spacing } from "@/theme";
 import { AuthHeader } from "../components/auth-header";
 import { LoginForm } from "../components/login-form";
 import { RegisterForm } from "../components/register-form";
@@ -52,6 +52,7 @@ export function LoginScreen({ initialMode = "login" }: LoginScreenProps) {
   );
 
   const isLogin = mode === "login";
+  const activeApiError = isLogin ? loginForm.apiError : registerForm.apiError;
 
   return (
     <ScreenContainer>
@@ -70,6 +71,12 @@ export function LoginScreen({ initialMode = "login" }: LoginScreenProps) {
         onChange={onTabChange}
         style={styles.segmentedControl}
       />
+
+      {activeApiError ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>{activeApiError}</Text>
+        </View>
+      ) : null}
 
       {isLogin ? (
         <LoginForm
@@ -109,7 +116,21 @@ export function LoginScreen({ initialMode = "login" }: LoginScreenProps) {
 const styles = StyleSheet.create({
   segmentedControl: {
     marginTop: spacing.xxl,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.lg,
+  },
+  errorBox: {
+    backgroundColor: "#FDECEC",
+    borderWidth: 1,
+    borderColor: colors.status.error,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.status.error,
   },
   banner: {
     marginTop: spacing.xxl,

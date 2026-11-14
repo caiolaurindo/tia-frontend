@@ -1,4 +1,6 @@
 import { useState, useCallback } from "react";
+import { useAuth } from "@/contexts";
+import { ApiError } from "@/services";
 import { RegisterFormData, RegisterFormErrors } from "../types/auth.types";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -8,6 +10,7 @@ export interface UseRegisterFormOptions {
 }
 
 export function useRegisterForm(options?: UseRegisterFormOptions) {
+  const { signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,19 +20,32 @@ export function useRegisterForm(options?: UseRegisterFormOptions) {
 
   const handleNameChange = useCallback((value: string) => {
     setName(value);
-    setErrors((prev) => (prev.name ? { ...prev, name: undefined } : prev));
+    setErrors((prev) =>
+      prev.name || prev.general
+        ? { ...prev, name: undefined, general: undefined }
+        : prev
+    );
   }, []);
 
   const handleEmailChange = useCallback((value: string) => {
     setEmail(value);
-    setErrors((prev) => (prev.email ? { ...prev, email: undefined } : prev));
+    setErrors((prev) =>
+      prev.email || prev.general
+        ? { ...prev, email: undefined, general: undefined }
+        : prev
+    );
   }, []);
 
   const handlePasswordChange = useCallback((value: string) => {
     setPassword(value);
     setErrors((prev) =>
-      prev.password || prev.confirmPassword
-        ? { ...prev, password: undefined, confirmPassword: undefined }
+      prev.password || prev.confirmPassword || prev.general
+        ? {
+            ...prev,
+            password: undefined,
+            confirmPassword: undefined,
+            general: undefined,
+          }
         : prev
     );
   }, []);
@@ -37,7 +53,9 @@ export function useRegisterForm(options?: UseRegisterFormOptions) {
   const handleConfirmPasswordChange = useCallback((value: string) => {
     setConfirmPassword(value);
     setErrors((prev) =>
-      prev.confirmPassword ? { ...prev, confirmPassword: undefined } : prev
+      prev.confirmPassword || prev.general
+        ? { ...prev, confirmPassword: undefined, general: undefined }
+        : prev
     );
   }, []);
 
@@ -79,22 +97,46 @@ export function useRegisterForm(options?: UseRegisterFormOptions) {
   }, [name, email, password, confirmPassword]);
 
   const handleSubmit = useCallback(async () => {
-    if (!validate()) {
+    if (!validate() || isSubmitting) {
       return;
     }
 
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
     setIsSubmitting(true);
     try {
+      await signUp({
+        nome: trimmedName,
+        email: trimmedEmail,
+        senha: password,
+      });
       options?.onRegisterSuccess?.({
-        name: name.trim(),
-        email: email.trim(),
+        name: trimmedName,
+        email: trimmedEmail,
         password,
         confirmPassword,
       });
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : error instanceof Error
+          ? error.message
+          : "Não foi possível criar a conta. Tente novamente.";
+      setErrors((prev) => ({ ...prev, general: message }));
     } finally {
       setIsSubmitting(false);
     }
-  }, [name, email, password, confirmPassword, options, validate]);
+  }, [
+    confirmPassword,
+    email,
+    isSubmitting,
+    name,
+    options,
+    password,
+    signUp,
+    validate,
+  ]);
 
   return {
     name,
@@ -102,6 +144,7 @@ export function useRegisterForm(options?: UseRegisterFormOptions) {
     password,
     confirmPassword,
     errors,
+    apiError: errors.general,
     isSubmitting,
     handleNameChange,
     handleEmailChange,

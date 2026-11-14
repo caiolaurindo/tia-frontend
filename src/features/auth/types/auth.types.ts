@@ -8,6 +8,7 @@ export interface LoginFormData {
 export interface LoginFormErrors {
   email?: string;
   password?: string;
+  general?: string;
 }
 
 export interface RegisterFormData {
@@ -22,4 +23,5 @@ export interface RegisterFormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
+  general?: string;
 }
