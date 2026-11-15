@@ -8,7 +8,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "@/theme";
 import { AppHeader } from "./app-header";
@@ -58,6 +58,10 @@ export function AppShell({
     }
     if (tab === "turmas") {
       router.push("/turmas");
+      return;
+    }
+    if (tab === "alunos") {
+      router.push("/alunos" as Href);
       return;
     }
     if (tab === "conquistas") {

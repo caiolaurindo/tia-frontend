@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
 import { AuthProvider } from "@/contexts";
+import { AlunosProvider } from "@/features/alunos";
 import { AulasProvider } from "@/features/aulas";
 import { ConquistasProvider } from "@/features/conquistas";
 import { TurmasProvider } from "@/features/turmas";
@@ -13,20 +14,22 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <TurmasProvider>
-        <ConquistasProvider>
-          <AulasProvider>
-            <StatusBar style="dark" />
+        <AlunosProvider>
+          <ConquistasProvider>
+            <AulasProvider>
+              <StatusBar style="dark" />
 
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: {
-                  backgroundColor: colors.background.primary,
-                },
-              }}
-            />
-          </AulasProvider>
-        </ConquistasProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: colors.background.primary,
+                  },
+                }}
+              />
+            </AulasProvider>
+          </ConquistasProvider>
+        </AlunosProvider>
       </TurmasProvider>
     </AuthProvider>
   );
