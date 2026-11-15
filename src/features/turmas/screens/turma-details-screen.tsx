@@ -5,7 +5,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Href, useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
@@ -100,6 +100,12 @@ export function TurmaDetailsScreen() {
 
       <View style={styles.actions}>
         <Button
+          title="Ver relatório semanal"
+          onPress={() =>
+            router.push(`/relatorios?turmaId=${turma.id}` as Href)
+          }
+        />
+        <Button
           title="Voltar para turmas"
           variant="secondary"
           onPress={() => router.back()}
@@ -165,6 +171,7 @@ const styles = StyleSheet.create({
 
   actions: {
     marginTop: spacing.sm,
+    gap: spacing.sm,
   },
 
   emptyContainer: {

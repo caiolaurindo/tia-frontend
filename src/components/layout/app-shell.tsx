@@ -53,7 +53,7 @@ export function AppShell({
       return;
     }
     if (tab === "inicio") {
-      router.push("/");
+      router.push("/home" as Href);
       return;
     }
     if (tab === "turmas") {
