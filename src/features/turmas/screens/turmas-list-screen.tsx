@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -24,7 +23,12 @@ export function TurmasListScreen() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FiltroTurma>("todas");
 
-  const { turmas } = useTurmasContext();
+  const {
+    turmas,
+    isLoading,
+    error,
+    refreshTurmas,
+  } = useTurmasContext();
 
   const filteredTurmas = turmas.filter((turma) => {
     const correspondeBusca = turma.nome
@@ -106,7 +110,22 @@ export function TurmasListScreen() {
       </View>
 
       <View style={styles.list}>
-        {filteredTurmas.length > 0 ? (
+        {isLoading ? (
+          <Text style={styles.emptyMessage}>
+            Carregando turmas...
+          </Text>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorMessage}>
+              {error}
+            </Text>
+
+            <Button
+              title="Tentar novamente"
+              onPress={() => void refreshTurmas()}
+            />
+          </View>
+        ) : filteredTurmas.length > 0 ? (
           filteredTurmas.map((turma) => (
             <TurmaCard
               key={turma.id}
@@ -200,5 +219,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.text.secondary,
     paddingVertical: spacing.xxl,
+  },
+
+  errorContainer: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+
+  errorMessage: {
+    textAlign: "center",
+    color: colors.text.secondary,
   },
 });

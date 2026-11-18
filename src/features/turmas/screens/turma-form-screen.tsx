@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Alert,
@@ -28,8 +27,11 @@ export function TurmaFormScreen() {
   const [faixaEtaria, setFaixaEtaria] = useState("");
   const [turno, setTurno] = useState("");
   const [descricao, setDescricao] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  function handleSave() {
+  async function handleSave() {
+    if (isSaving) return;
+
     const ano = Number(anoLetivo);
 
     if (!nome.trim()) {
@@ -61,27 +63,41 @@ export function TurmaFormScreen() {
       return;
     }
 
-    createTurma({
-      nome: nome.trim(),
-      serie: serie.trim(),
-      anoLetivo: ano,
-      faixaEtaria: faixaEtaria.trim(),
-      turno,
-      descricao: descricao.trim(),
-    });
+    try {
+      setIsSaving(true);
 
-    Alert.alert("Sucesso", "Turma cadastrada com sucesso!", [
-      {
-        text: "OK",
-        onPress: () => router.replace("/turmas"),
-      },
-    ]);
+      await createTurma({
+        nome: nome.trim(),
+        serie: serie.trim(),
+        anoLetivo: ano,
+        faixaEtaria: faixaEtaria.trim(),
+        turno,
+        descricao: descricao.trim(),
+      });
+
+      Alert.alert("Sucesso", "Turma cadastrada com sucesso!", [
+        {
+          text: "OK",
+          onPress: () => router.replace("/turmas"),
+        },
+      ]);
+    } catch (erro) {
+      const mensagem =
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível cadastrar a turma.";
+
+      Alert.alert("Erro ao cadastrar", mensagem);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
     <AppShell title="Nova turma" activeTab="turmas">
       <View style={styles.header}>
         <Text style={styles.title}>Cadastrar turma</Text>
+
         <Text style={styles.subtitle}>
           Preencha as informações para adicionar uma nova turma.
         </Text>
@@ -90,6 +106,7 @@ export function TurmaFormScreen() {
       <View style={styles.form}>
         <View style={styles.field}>
           <Text style={styles.label}>Nome da turma</Text>
+
           <TextInput
             value={nome}
             onChangeText={setNome}
@@ -101,6 +118,7 @@ export function TurmaFormScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Série</Text>
+
           <TextInput
             value={serie}
             onChangeText={setSerie}
@@ -112,6 +130,7 @@ export function TurmaFormScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Ano letivo</Text>
+
           <TextInput
             value={anoLetivo}
             onChangeText={setAnoLetivo}
@@ -125,6 +144,7 @@ export function TurmaFormScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Faixa etária</Text>
+
           <TextInput
             value={faixaEtaria}
             onChangeText={setFaixaEtaria}
@@ -167,6 +187,7 @@ export function TurmaFormScreen() {
 
         <View style={styles.field}>
           <Text style={styles.label}>Descrição (opcional)</Text>
+
           <TextInput
             value={descricao}
             onChangeText={setDescricao}
@@ -181,7 +202,7 @@ export function TurmaFormScreen() {
 
         <View style={styles.actions}>
           <Button
-            title="Salvar turma"
+            title={isSaving ? "Salvando..." : "Salvar turma"}
             onPress={handleSave}
           />
 
