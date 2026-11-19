@@ -34,6 +34,21 @@ export function AulaTrackingScreen() {
     completeLesson,
   } = useLessonTracking(params.id);
 
+  if (!lesson) {
+    return (
+      <AppShell
+        title="Acompanhamento da aula"
+        onBackPress={() => router.back()}
+        onLogoPress={() => router.push("/aulas")}
+        activeTab="registrar"
+      >
+        <Card style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Aula não encontrada.</Text>
+        </Card>
+      </AppShell>
+    );
+  }
+
   const handleFinishLesson = () => {
     completeLesson();
     router.push({

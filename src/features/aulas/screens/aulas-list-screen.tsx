@@ -1,6 +1,8 @@
 import React from "react";
+import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
+import { Button } from "@/components/ui";
 import { AulasCalendarStrip } from "../components/aulas-calendar-strip";
 import { AulasPageHeader } from "../components/aulas-page-header";
 import { AulasToolbar } from "../components/aulas-toolbar";
@@ -28,6 +30,9 @@ export function AulasListScreen() {
     filteredLessons,
     highlightedLesson,
     selectLesson,
+    isLoading,
+    error,
+    refreshLessons,
   } = useAulasSchedule();
 
   const handleOpenNewLesson = () => {
@@ -62,7 +67,11 @@ export function AulasListScreen() {
     <AppShell
       title="Aulas"
       activeTab="registrar"
-      onPrimaryActionPress={() => handleStartTracking(highlightedLesson)}
+      onPrimaryActionPress={() =>
+        highlightedLesson
+          ? handleStartTracking(highlightedLesson)
+          : handleOpenNewLesson()
+      }
     >
       <AulasPageHeader onNewLessonPress={handleOpenNewLesson} />
 
@@ -85,21 +94,35 @@ export function AulasListScreen() {
         />
       ) : null}
 
-      <TodayScheduleCard
-        dateTitle={currentWeek.dateTitle}
-        lessons={filteredLessons}
-        selectedLessonId={highlightedLesson.id}
-        onSelectLesson={(lesson) => selectLesson(lesson.id)}
-      />
+      {isLoading ? (
+        <Text style={{ textAlign: "center" }}>Carregando aulas...</Text>
+      ) : error ? (
+        <View style={{ gap: 12 }}>
+          <Text style={{ textAlign: "center" }}>{error}</Text>
+          <Button
+            title="Tentar novamente"
+            onPress={() => void refreshLessons()}
+          />
+        </View>
+      ) : (
+        <>
+          <TodayScheduleCard
+            dateTitle={currentWeek.dateTitle}
+            lessons={filteredLessons}
+            selectedLessonId={highlightedLesson?.id ?? ""}
+            onSelectLesson={(lesson) => selectLesson(lesson.id)}
+          />
 
-      {highlightedLesson ? (
-        <NextLessonCard
-          lesson={highlightedLesson}
-          onStartTracking={handleStartTracking}
-          onEditLesson={handleEditLesson}
-          onViewSummary={handleViewSummary}
-        />
-      ) : null}
+          {highlightedLesson ? (
+            <NextLessonCard
+              lesson={highlightedLesson}
+              onStartTracking={handleStartTracking}
+              onEditLesson={handleEditLesson}
+              onViewSummary={handleViewSummary}
+            />
+          ) : null}
+        </>
+      )}
     </AppShell>
   );
 }

@@ -1,5 +1,7 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { INITIAL_LESSONS } from "../data/mock-aulas";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts";
+import { useTurmasContext } from "@/features/turmas";
+import { AulaApi, aulaService } from "@/services";
 import {
   LessonItem,
   NewLessonInput,
@@ -9,10 +11,13 @@ import {
 interface AulasContextValue {
   lessons: LessonItem[];
   selectedLessonId: string;
+  isLoading: boolean;
+  error: string | null;
+  refreshLessons: () => Promise<void>;
   selectLesson: (lessonId: string) => void;
-  getLessonById: (lessonId?: string) => LessonItem;
-  createLesson: (input: NewLessonInput) => LessonItem;
-  updateLesson: (lessonId: string, input: NewLessonInput) => void;
+  getLessonById: (lessonId?: string) => LessonItem | undefined;
+  createLesson: (input: NewLessonInput) => Promise<LessonItem>;
+  updateLesson: (lessonId: string, input: NewLessonInput) => Promise<void>;
   startLesson: (lessonId: string) => void;
   finishLesson: (
     lessonId: string,
@@ -37,53 +42,126 @@ interface AulasContextValue {
 
 const AulasContext = createContext<AulasContextValue | null>(null);
 
+function mapearAula(aulaApi: AulaApi): LessonItem {
+  const dateIso = aulaApi.data ? String(aulaApi.data).slice(0, 10) : new Date().toISOString().slice(0, 10);
+  const turmaId =
+    aulaApi.turma?.id !== undefined
+      ? String(aulaApi.turma.id)
+      : aulaApi.turmaId !== undefined
+        ? String(aulaApi.turmaId)
+        : undefined;
+
+  return {
+    id: String(aulaApi.id),
+    turmaId,
+    dateIso,
+    title: aulaApi.nome,
+    classGroup: aulaApi.turma?.nome ?? "",
+    grade: aulaApi.turma?.serie ?? "",
+    dateLabel: dateIso.split("-").reverse().join("/"),
+    dayOfWeek: 4,
+    startTime: "10:00",
+    endTime: "11:00",
+    status: "planejada",
+    content: aulaApi.assunto ?? "",
+    activities: [],
+    achievements: [],
+    students: [],
+    elapsedMinutes: 0,
+    totalStudentsCount: 0,
+    preRegisteredCount: 0,
+  };
+}
+
 export function AulasProvider({ children }: { children: React.ReactNode }) {
-  const [lessons, setLessons] = useState<LessonItem[]>(INITIAL_LESSONS);
-  const [selectedLessonId, setSelectedLessonId] = useState<string>(
-    INITIAL_LESSONS[0].id
+  const { token } = useAuth();
+  const { turmas } = useTurmasContext();
+
+  const [rawLessons, setLessons] = useState<LessonItem[]>([]);
+  const [selectedLessonId, setSelectedLessonId] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const lessons = useMemo(
+    () =>
+      rawLessons.map((lesson) => {
+        const turma = lesson.turmaId
+          ? turmas.find((t) => t.id === lesson.turmaId)
+          : undefined;
+        return turma
+          ? {
+              ...lesson,
+              classGroup: lesson.classGroup || turma.nome,
+              grade: lesson.grade || turma.serie,
+            }
+          : lesson;
+      }),
+    [rawLessons, turmas]
   );
+
+  const refreshLessons = useCallback(async () => {
+    if (!token) {
+      setLessons([]);
+      setSelectedLessonId("");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const resposta = await aulaService.listar();
+      const mapeadas = resposta.map(mapearAula);
+      setLessons(mapeadas);
+      setSelectedLessonId((prev) =>
+        prev && mapeadas.some((item) => item.id === prev)
+          ? prev
+          : (mapeadas[0]?.id ?? "")
+      );
+    } catch (erro) {
+      const mensagem =
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível carregar as aulas.";
+      setError(mensagem);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void refreshLessons();
+  }, [refreshLessons]);
 
   const selectLesson = useCallback((lessonId: string) => {
     setSelectedLessonId(lessonId);
   }, []);
 
   const getLessonById = useCallback(
-    (lessonId?: string): LessonItem => {
+    (lessonId?: string): LessonItem | undefined => {
       const targetId = lessonId || selectedLessonId;
-      return (
-        lessons.find((item) => item.id === targetId) ??
-        lessons[0]
-      );
+      return lessons.find((item) => item.id === targetId) ?? lessons[0];
     },
     [lessons, selectedLessonId]
   );
 
   const createLesson = useCallback(
-    (input: NewLessonInput): LessonItem => {
-      const baseStudents = INITIAL_LESSONS[0].students.map((st) => ({
-        ...st,
-        observations: [],
-        note: "",
-        achievedIds: [],
-      }));
+    async (input: NewLessonInput): Promise<LessonItem> => {
+      const resposta = await aulaService.criar({
+        nome: input.title,
+        assunto: input.content,
+        data: input.dateIso ?? new Date().toISOString().slice(0, 10),
+        turmaId: Number(input.turmaId),
+      });
 
       const newLesson: LessonItem = {
-        id: `aula-${Date.now()}`,
-        title: input.title,
+        ...mapearAula(resposta),
+        turmaId: input.turmaId,
         classGroup: input.classGroup,
         grade: input.grade,
-        dateLabel: input.dateLabel,
-        dayOfWeek: input.dayOfWeek,
         startTime: input.startTime,
         endTime: input.endTime,
-        status: "planejada",
-        content: input.content,
         activities: input.activities,
         achievements: input.achievements,
-        students: baseStudents,
-        elapsedMinutes: 0,
-        totalStudentsCount: 22,
-        preRegisteredCount: 0,
       };
 
       setLessons((prev) => [newLesson, ...prev]);
@@ -94,20 +172,27 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateLesson = useCallback(
-    (lessonId: string, input: NewLessonInput) => {
+    async (lessonId: string, input: NewLessonInput) => {
+      const resposta = await aulaService.atualizar(lessonId, {
+        nome: input.title,
+        assunto: input.content,
+        data: input.dateIso ?? new Date().toISOString().slice(0, 10),
+        turmaId: Number(input.turmaId),
+      });
+
+      const atualizada = mapearAula(resposta);
+
       setLessons((prev) =>
         prev.map((item) =>
           item.id === lessonId
             ? {
                 ...item,
-                title: input.title,
+                ...atualizada,
+                turmaId: input.turmaId,
                 classGroup: input.classGroup,
                 grade: input.grade,
-                dateLabel: input.dateLabel,
-                dayOfWeek: input.dayOfWeek,
                 startTime: input.startTime,
                 endTime: input.endTime,
-                content: input.content,
                 activities: input.activities,
                 achievements: input.achievements,
               }
@@ -225,6 +310,9 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
     () => ({
       lessons,
       selectedLessonId,
+      isLoading,
+      error,
+      refreshLessons,
       selectLesson,
       getLessonById,
       createLesson,
@@ -237,6 +325,9 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
     [
       lessons,
       selectedLessonId,
+      isLoading,
+      error,
+      refreshLessons,
       selectLesson,
       getLessonById,
       createLesson,

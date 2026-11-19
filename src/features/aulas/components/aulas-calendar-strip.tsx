@@ -1,7 +1,15 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useTurmasContext } from "@/features/turmas";
 import { colors, radii, spacing } from "@/theme";
-import { CLASS_GROUPS, WEEK_DAYS } from "../data/mock-aulas";
+
+const WEEK_DAYS = [
+  { index: 0, short: "Seg", dayNumber: "01" },
+  { index: 1, short: "Ter", dayNumber: "02" },
+  { index: 2, short: "Qua", dayNumber: "03" },
+  { index: 3, short: "Qui", dayNumber: "04" },
+  { index: 4, short: "Sex", dayNumber: "05" },
+];
 
 export interface AulasCalendarStripProps {
   selectedDay: number;
@@ -16,6 +24,8 @@ export function AulasCalendarStrip({
   classFilter,
   onSelectClassFilter,
 }: AulasCalendarStripProps) {
+  const { turmas } = useTurmasContext();
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.daysRow}>
@@ -62,12 +72,12 @@ export function AulasCalendarStrip({
           </Text>
         </Pressable>
 
-        {CLASS_GROUPS.map((group) => {
-          const isSelected = classFilter === group.classGroup;
+        {turmas.map((turma) => {
+          const isSelected = classFilter === turma.nome;
           return (
             <Pressable
-              key={group.id}
-              onPress={() => onSelectClassFilter(group.classGroup)}
+              key={turma.id}
+              onPress={() => onSelectClassFilter(turma.nome)}
               style={[
                 styles.filterChip,
                 isSelected && styles.filterChipActive,
@@ -79,7 +89,7 @@ export function AulasCalendarStrip({
                   isSelected && styles.filterChipTextActive,
                 ]}
               >
-                {group.grade}
+                {turma.serie || turma.nome}
               </Text>
             </Pressable>
           );

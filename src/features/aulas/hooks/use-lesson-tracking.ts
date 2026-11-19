@@ -11,10 +11,11 @@ export function useLessonTracking(lessonId?: string) {
   } = useAulasContext();
 
   const lesson = getLessonById(lessonId);
+  const students = lesson?.students ?? [];
 
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedMinutes, setElapsedMinutes] = useState(
-    lesson.elapsedMinutes || 32
+    lesson?.elapsedMinutes ?? 0
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [showOnlyPending, setShowOnlyPending] = useState(false);
@@ -42,15 +43,16 @@ export function useLessonTracking(lessonId?: string) {
 
   const handleQuickObservation = useCallback(
     (studentId: string, type: QuickObservationType) => {
+      if (!lesson) return;
       toggleStudentObservation(lesson.id, studentId, type);
     },
-    [lesson.id, toggleStudentObservation]
+    [lesson, toggleStudentObservation]
   );
 
   const filteredStudents = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return lesson.students.filter((student) => {
+    return students.filter((student) => {
       const hasAnyRegistration =
         student.observations.length > 0 || student.note.trim().length > 0;
       const matchesPending = !showOnlyPending || !hasAnyRegistration;
@@ -61,25 +63,24 @@ export function useLessonTracking(lessonId?: string) {
 
       return matchesPending && matchesQuery;
     });
-  }, [lesson.students, searchQuery, showOnlyPending]);
+  }, [students, searchQuery, showOnlyPending]);
 
   const registeredInVisibleList = useMemo(() => {
-    return lesson.students.filter(
+    return students.filter(
       (s) => s.observations.length > 0 || s.note.trim().length > 0
     ).length;
-  }, [lesson.students]);
+  }, [students]);
 
+  const totalStudentsCount = lesson?.totalStudentsCount ?? 0;
   const registeredCount = Math.min(
-    lesson.totalStudentsCount,
-    lesson.preRegisteredCount + registeredInVisibleList
+    totalStudentsCount,
+    (lesson?.preRegisteredCount ?? 0) + registeredInVisibleList
   );
 
   const selectedStudent: StudentLessonRecord | null = useMemo(() => {
     if (!selectedStudentId) return null;
-    return (
-      lesson.students.find((s) => s.studentId === selectedStudentId) ?? null
-    );
-  }, [lesson.students, selectedStudentId]);
+    return students.find((s) => s.studentId === selectedStudentId) ?? null;
+  }, [students, selectedStudentId]);
 
   const saveStudentDetail = useCallback(
     (payload: {
@@ -87,18 +88,19 @@ export function useLessonTracking(lessonId?: string) {
       note: string;
       achievedIds: string[];
     }) => {
-      if (!selectedStudentId) return;
+      if (!lesson || !selectedStudentId) return;
       updateStudentDetail(lesson.id, selectedStudentId, payload);
       setSelectedStudentId(null);
     },
-    [lesson.id, selectedStudentId, updateStudentDetail]
+    [lesson, selectedStudentId, updateStudentDetail]
   );
 
   const completeLesson = useCallback(
     (summaryNote?: string) => {
+      if (!lesson) return;
       finishLesson(lesson.id, elapsedMinutes, summaryNote);
     },
-    [elapsedMinutes, finishLesson, lesson.id]
+    [elapsedMinutes, finishLesson, lesson]
   );
 
   return {
@@ -112,7 +114,7 @@ export function useLessonTracking(lessonId?: string) {
     togglePendingFilter,
     filteredStudents,
     registeredCount,
-    totalStudentsCount: lesson.totalStudentsCount,
+    totalStudentsCount,
     handleQuickObservation,
     selectedStudent,
     openStudentModal: setSelectedStudentId,

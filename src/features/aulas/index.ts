@@ -1,5 +1,4 @@
 export * from "./types/aulas.types";
-export * from "./data/mock-aulas";
 export * from "./context/aulas-context";
 export * from "./hooks/use-aulas-schedule";
 export * from "./hooks/use-lesson-tracking";

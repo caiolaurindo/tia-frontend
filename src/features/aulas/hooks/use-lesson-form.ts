@@ -1,10 +1,7 @@
 import { useCallback, useState } from "react";
+import { useTurmasContext } from "@/features/turmas";
 import { TagColorVariant } from "@/theme";
 import { useAulasContext } from "../context/aulas-context";
-import {
-  CLASS_GROUPS,
-  SUGGESTED_ACHIEVEMENTS,
-} from "../data/mock-aulas";
 import {
   LessonAchievement,
   LessonActivity,
@@ -14,6 +11,7 @@ import {
 const ACTIVITY_COLORS: TagColorVariant[] = ["purple", "green", "amber", "blue"];
 
 export interface LessonFormErrors {
+  turma?: string;
   title?: string;
   content?: string;
   startTime?: string;
@@ -21,12 +19,15 @@ export interface LessonFormErrors {
 
 export function useLessonForm(existingLesson?: LessonItem) {
   const { createLesson, updateLesson } = useAulasContext();
+  const { turmas } = useTurmasContext();
 
   const initialGroupIndex = existingLesson
     ? Math.max(
         0,
-        CLASS_GROUPS.findIndex(
-          (g) => g.classGroup === existingLesson.classGroup
+        turmas.findIndex(
+          (t) =>
+            t.id === existingLesson.turmaId ||
+            t.nome === existingLesson.classGroup
         )
       )
     : 0;
@@ -40,17 +41,13 @@ export function useLessonForm(existingLesson?: LessonItem) {
   const [content, setContent] = useState(existingLesson?.content ?? "");
   const [newActivityText, setNewActivityText] = useState("");
   const [activities, setActivities] = useState<LessonActivity[]>(
-    existingLesson?.activities ?? [
-      { id: "act-init-1", label: "Warm-up oral", color: "purple" },
-      { id: "act-init-2", label: "Prática em duplas", color: "green" },
-    ]
+    existingLesson?.activities ?? []
   );
   const [selectedAchievements, setSelectedAchievements] = useState<string[]>(
-    existingLesson?.achievements.map((a) => a.title) ?? [
-      SUGGESTED_ACHIEVEMENTS[0],
-    ]
+    existingLesson?.achievements.map((a) => a.title) ?? []
   );
   const [errors, setErrors] = useState<LessonFormErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   const addActivity = useCallback(() => {
     const trimmed = newActivityText.trim();
@@ -85,6 +82,9 @@ export function useLessonForm(existingLesson?: LessonItem) {
   const validate = useCallback((): boolean => {
     const nextErrors: LessonFormErrors = {};
 
+    if (!turmas[groupIndex] && !turmas[0]) {
+      nextErrors.turma = "Cadastre e selecione uma turma para a aula.";
+    }
     if (!title.trim()) {
       nextErrors.title = "Informe o tema ou título da aula.";
     }
@@ -97,12 +97,15 @@ export function useLessonForm(existingLesson?: LessonItem) {
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
-  }, [content, startTime, title]);
+  }, [content, groupIndex, startTime, title, turmas]);
 
-  const saveLesson = useCallback((): LessonItem | null => {
-    if (!validate()) return null;
+  const saveLesson = useCallback(async (): Promise<LessonItem | null> => {
+    if (isSaving || !validate()) return null;
 
-    const chosenGroup = CLASS_GROUPS[groupIndex] ?? CLASS_GROUPS[0];
+    const chosenGroup = turmas[groupIndex] ?? turmas[0];
+    if (!chosenGroup) return null;
+
+    const dateIso = existingLesson?.dateIso ?? new Date().toISOString().slice(0, 10);
     const formattedAchievements: LessonAchievement[] = selectedAchievements.map(
       (achTitle, idx) => ({
         id: `ach-form-${idx}`,
@@ -112,10 +115,12 @@ export function useLessonForm(existingLesson?: LessonItem) {
     );
 
     const payload = {
+      turmaId: chosenGroup.id,
+      dateIso,
       title: title.trim(),
-      classGroup: chosenGroup.classGroup,
-      grade: chosenGroup.grade,
-      dateLabel: "Hoje · sexta, 02 de outubro",
+      classGroup: chosenGroup.nome,
+      grade: chosenGroup.serie,
+      dateLabel: dateIso.split("-").reverse().join("/"),
       dayOfWeek: 4,
       startTime: startTime.trim(),
       endTime: endTime.trim() || "11:00",
@@ -124,12 +129,17 @@ export function useLessonForm(existingLesson?: LessonItem) {
       achievements: formattedAchievements,
     };
 
-    if (existingLesson) {
-      updateLesson(existingLesson.id, payload);
-      return { ...existingLesson, ...payload };
-    }
+    try {
+      setIsSaving(true);
+      if (existingLesson) {
+        await updateLesson(existingLesson.id, payload);
+        return { ...existingLesson, ...payload };
+      }
 
-    return createLesson(payload);
+      return await createLesson(payload);
+    } finally {
+      setIsSaving(false);
+    }
   }, [
     activities,
     content,
@@ -137,14 +147,17 @@ export function useLessonForm(existingLesson?: LessonItem) {
     endTime,
     existingLesson,
     groupIndex,
+    isSaving,
     selectedAchievements,
     startTime,
     title,
+    turmas,
     updateLesson,
     validate,
   ]);
 
   return {
+    turmas,
     title,
     setTitle: (val: string) => {
       setTitle(val);
@@ -169,6 +182,7 @@ export function useLessonForm(existingLesson?: LessonItem) {
     selectedAchievements,
     toggleAchievement,
     errors,
+    isSaving,
     saveLesson,
   };
 }

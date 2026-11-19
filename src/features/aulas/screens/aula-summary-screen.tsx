@@ -13,31 +13,45 @@ export function AulaSummaryScreen() {
 
   const lesson = getLessonById(params.id);
   const [summaryNote, setSummaryNote] = useState(
-    lesson.teacherSummaryNote ??
-      "A turma demonstrou ótimo engajamento nas entrevistas em duplas. Reforçar advérbios de frequência na próxima aula."
+    lesson?.teacherSummaryNote ?? ""
   );
 
   const stats = useMemo(() => {
-    const participations = lesson.students.filter((s) =>
+    const students = lesson?.students ?? [];
+    const participations = students.filter((s) =>
       s.observations.includes("participacao")
     ).length;
-    const activitiesDone = lesson.students.filter((s) =>
+    const activitiesDone = students.filter((s) =>
       s.observations.includes("atividade")
     ).length;
-    const difficulties = lesson.students.filter((s) =>
+    const difficulties = students.filter((s) =>
       s.observations.includes("dificuldade")
     );
-    const achievements = lesson.students.filter((s) =>
+    const achievements = students.filter((s) =>
       s.observations.includes("conquista")
     );
 
     return {
-      participations: participations + 14,
-      activitiesDone: activitiesDone + 15,
+      participations,
+      activitiesDone,
       difficulties,
       achievements,
     };
-  }, [lesson.students]);
+  }, [lesson?.students]);
+
+  if (!lesson) {
+    return (
+      <AppShell
+        title="Resumo da aula"
+        onBackPress={() => router.back()}
+        onLogoPress={() => router.push("/aulas")}
+      >
+        <Card>
+          <Text>Aula não encontrada.</Text>
+        </Card>
+      </AppShell>
+    );
+  }
 
   const handleSaveAndReturn = () => {
     finishLesson(lesson.id, lesson.elapsedMinutes || 45, summaryNote);

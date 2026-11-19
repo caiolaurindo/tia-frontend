@@ -35,6 +35,8 @@ export interface StudentLessonRecord {
 
 export interface LessonItem {
   id: string;
+  turmaId?: string;
+  dateIso?: string;
   title: string;
   classGroup: string;
   grade: string;
@@ -54,6 +56,8 @@ export interface LessonItem {
 }
 
 export interface NewLessonInput {
+  turmaId: string;
+  dateIso?: string;
   title: string;
   classGroup: string;
   grade: string;

@@ -1,10 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAulasContext } from "../context/aulas-context";
-import { WEEK_RANGES } from "../data/mock-aulas";
 import { AulasViewMode } from "../types/aulas.types";
 
+const WEEK_RANGES = [
+  { id: "w1", label: "Semana anterior", dateTitle: "Aulas planejadas" },
+  { id: "w2", label: "Semana atual", dateTitle: "Aulas planejadas" },
+  { id: "w3", label: "Próxima semana", dateTitle: "Aulas planejadas" },
+];
+
 export function useAulasSchedule() {
-  const { lessons, selectedLessonId, selectLesson } = useAulasContext();
+  const { lessons, selectedLessonId, selectLesson, isLoading, error, refreshLessons } = useAulasContext();
 
   const [viewMode, setViewMode] = useState<AulasViewMode>("lista");
   const [weekIndex, setWeekIndex] = useState(1); // "28 set - 04 out"
@@ -26,7 +31,7 @@ export function useAulasSchedule() {
       const matchesClass =
         classFilter === "todas" || lesson.classGroup === classFilter;
       const matchesDay =
-        viewMode === "lista" ? lesson.dayOfWeek === 4 : lesson.dayOfWeek === selectedDay;
+        viewMode === "lista" ? true : lesson.dayOfWeek === selectedDay;
 
       return matchesClass && matchesDay;
     });
@@ -55,5 +60,8 @@ export function useAulasSchedule() {
     filteredLessons,
     highlightedLesson,
     selectLesson,
+    isLoading,
+    error,
+    refreshLessons,
   };
 }

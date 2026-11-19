@@ -1,17 +1,18 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card, Icon, TextField } from "@/components/ui";
+import { useConquistasContext } from "@/features/conquistas";
 import { colors, radii, spacing } from "@/theme";
 import { useAulasContext } from "../context/aulas-context";
-import { CLASS_GROUPS, SUGGESTED_ACHIEVEMENTS } from "../data/mock-aulas";
 import { useLessonForm } from "../hooks/use-lesson-form";
 
 export function AulaFormScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const { lessons } = useAulasContext();
+  const { conquistas } = useConquistasContext();
 
   const existingLesson = params.id
     ? lessons.find((item) => item.id === params.id)
@@ -20,6 +21,7 @@ export function AulaFormScreen() {
   const isEditing = Boolean(existingLesson);
 
   const {
+    turmas,
     title,
     setTitle,
     groupIndex,
@@ -38,13 +40,24 @@ export function AulaFormScreen() {
     selectedAchievements,
     toggleAchievement,
     errors,
+    isSaving,
     saveLesson,
   } = useLessonForm(existingLesson);
 
-  const handleSave = () => {
-    const saved = saveLesson();
-    if (saved) {
-      router.replace("/aulas");
+  const activeConquistas = conquistas.filter((c) => c.ativa);
+
+  const handleSave = async () => {
+    try {
+      const saved = await saveLesson();
+      if (saved) {
+        router.replace("/aulas");
+      }
+    } catch (erro) {
+      const mensagem =
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível salvar a aula.";
+      Alert.alert("Erro ao salvar", mensagem);
     }
   };
 
@@ -58,38 +71,46 @@ export function AulaFormScreen() {
       <Card style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>1. Turma e horário</Text>
 
-        <View style={styles.groupList}>
-          {CLASS_GROUPS.map((group, idx) => {
-            const isSelected = idx === groupIndex;
-            return (
-              <Pressable
-                key={group.id}
-                onPress={() => setGroupIndex(idx)}
-                style={[
-                  styles.groupChip,
-                  isSelected && styles.groupChipSelected,
-                ]}
-              >
-                <Text
+        {turmas.length === 0 ? (
+          <Button
+            title="Cadastrar minha primeira turma"
+            variant="secondary"
+            onPress={() => router.push("/turmas/nova")}
+          />
+        ) : (
+          <View style={styles.groupList}>
+            {turmas.map((turma, idx) => {
+              const isSelected = idx === groupIndex;
+              return (
+                <Pressable
+                  key={turma.id}
+                  onPress={() => setGroupIndex(idx)}
                   style={[
-                    styles.groupName,
-                    isSelected && styles.groupTextSelected,
+                    styles.groupChip,
+                    isSelected && styles.groupChipSelected,
                   ]}
                 >
-                  {group.classGroup}
-                </Text>
-                <Text
-                  style={[
-                    styles.groupGrade,
-                    isSelected && styles.groupTextSelected,
-                  ]}
-                >
-                  {group.grade}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.groupName,
+                      isSelected && styles.groupTextSelected,
+                    ]}
+                  >
+                    {turma.nome}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.groupGrade,
+                      isSelected && styles.groupTextSelected,
+                    ]}
+                  >
+                    {turma.serie}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
 
         <View style={styles.timeRow}>
           <TextField
@@ -169,12 +190,12 @@ export function AulaFormScreen() {
         </Text>
 
         <View style={styles.achievementsList}>
-          {SUGGESTED_ACHIEVEMENTS.map((achTitle) => {
-            const isSelected = selectedAchievements.includes(achTitle);
+          {activeConquistas.map((conquista) => {
+            const isSelected = selectedAchievements.includes(conquista.nome);
             return (
               <Pressable
-                key={achTitle}
-                onPress={() => toggleAchievement(achTitle)}
+                key={conquista.id}
+                onPress={() => toggleAchievement(conquista.nome)}
                 style={[
                   styles.achievementItem,
                   isSelected && styles.achievementItemSelected,
@@ -193,7 +214,7 @@ export function AulaFormScreen() {
                     isSelected && styles.achievementLabelSelected,
                   ]}
                 >
-                  {achTitle}
+                  {conquista.nome}
                 </Text>
               </Pressable>
             );
@@ -209,8 +230,14 @@ export function AulaFormScreen() {
           style={styles.flexBtn}
         />
         <Button
-          title={isEditing ? "Salvar alterações" : "Planejar aula"}
-          onPress={handleSave}
+          title={
+            isSaving
+              ? "Salvando..."
+              : isEditing
+                ? "Salvar alterações"
+                : "Planejar aula"
+          }
+          onPress={() => void handleSave()}
           style={styles.flexBtn}
         />
       </View>
