@@ -21,6 +21,7 @@ interface AuthContextValue {
   signIn: (payload: LoginPayload) => Promise<void>;
   signUp: (payload: RegisterPayload) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (data: Partial<ProfessorUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -76,6 +77,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateProfile = useCallback((data: Partial<ProfessorUser>) => {
+    setUser((prev) => (prev ? { ...prev, ...data } : null));
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -85,8 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signIn,
       signUp,
       signOut,
+      updateProfile,
     }),
-    [user, token, isLoading, signIn, signUp, signOut]
+    [user, token, isLoading, signIn, signUp, signOut, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

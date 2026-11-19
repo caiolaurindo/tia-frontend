@@ -19,6 +19,10 @@ export interface AppShellProps {
   children: React.ReactNode;
   onBackPress?: () => void;
   onLogoPress?: () => void;
+  onNotificationPress?: () => void;
+  onSettingsPress?: () => void;
+  showSettings?: boolean;
+  hasUnreadNotifications?: boolean;
   activeTab?: BottomTabKey;
   onTabPress?: (tab: BottomTabKey) => void;
   onPrimaryActionPress?: () => void;
@@ -31,6 +35,10 @@ export function AppShell({
   children,
   onBackPress,
   onLogoPress,
+  onNotificationPress,
+  onSettingsPress,
+  showSettings = true,
+  hasUnreadNotifications = false,
   activeTab = "registrar",
   onTabPress,
   onPrimaryActionPress,
@@ -38,6 +46,22 @@ export function AppShell({
   contentContainerStyle,
 }: AppShellProps) {
   const router = useRouter();
+
+  const handleLogoPress = () => {
+    if (onLogoPress) {
+      onLogoPress();
+      return;
+    }
+    router.push("/home" as Href);
+  };
+
+  const handleSettingsPress = () => {
+    if (onSettingsPress) {
+      onSettingsPress();
+      return;
+    }
+    router.push("/configuracoes" as Href);
+  };
 
   const handleTabPress = (tab: BottomTabKey) => {
     if (onTabPress) {
@@ -84,7 +108,11 @@ export function AppShell({
         <AppHeader
           title={title}
           onBackPress={onBackPress}
-          onLogoPress={onLogoPress}
+          onLogoPress={handleLogoPress}
+          onNotificationPress={onNotificationPress}
+          onSettingsPress={handleSettingsPress}
+          showSettings={showSettings}
+          hasUnreadNotifications={hasUnreadNotifications}
         />
 
         <KeyboardAvoidingView

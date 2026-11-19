@@ -4,6 +4,8 @@ export interface ProfessorUser {
   id: string;
   nome: string;
   email: string;
+  escola?: string;
+  telefone?: string;
   role?: string;
 }
 
@@ -104,7 +106,19 @@ export const authService = {
     return normalizeAuthResponse(raw, payload.email, payload.nome);
   },
 
-  getMe: () => api.get<ProfessorUser>("/professores/me"),
+  getMe: async (): Promise<ProfessorUser> => {
+    try {
+      return await api.get<ProfessorUser>("/auth/me");
+    } catch {
+      return await api.get<ProfessorUser>("/professores/me");
+    }
+  },
 
-  logout: () => api.post<void>("/auth/logout"),
+  logout: async (): Promise<void> => {
+    try {
+      await api.post<void>("/auth/logout");
+    } catch {
+      // Ignora erro se a API for stateless JWT sem blacklist
+    }
+  },
 };

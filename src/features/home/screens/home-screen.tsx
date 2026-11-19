@@ -2,7 +2,7 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Href, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
-import { Card, Icon, IconName } from "@/components/ui";
+import { AvatarInitials, Card, Icon, IconName } from "@/components/ui";
 import { useAuth } from "@/contexts";
 import { useAlunosContext } from "@/features/alunos";
 import { useAulasContext } from "@/features/aulas";
@@ -53,10 +53,34 @@ export function HomeScreen() {
   return (
     <AppShell title="Dashboard" activeTab="inicio">
       <View style={styles.greetingBlock}>
-        <Text style={styles.greetingTitle}>Olá, {firstName}! 👋</Text>
-        <Text style={styles.greetingSubtitle}>
-          Aqui está o que está acontecendo com suas turmas hoje.
-        </Text>
+        <View style={styles.greetingHeaderRow}>
+          <View style={styles.greetingTextCol}>
+            <Text style={styles.greetingTitle}>Olá, {firstName}! 👋</Text>
+            <Text style={styles.greetingSubtitle}>
+              Aqui está o que está acontecendo com suas turmas hoje.
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => router.push("/configuracoes" as Href)}
+            style={({ pressed }) => [
+              styles.avatarButton,
+              pressed && styles.avatarButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Ver perfil e configurações"
+          >
+            <AvatarInitials
+              initials={
+                user?.nome
+                  ? user.nome.slice(0, 2).toUpperCase()
+                  : firstName.slice(0, 2).toUpperCase()
+              }
+              variant="purple"
+              size={42}
+            />
+          </Pressable>
+        </View>
 
         <Pressable
           onPress={() => router.push("/registros/novo")}
@@ -206,6 +230,25 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   greetingBlock: {
     gap: spacing.xs,
+  },
+  greetingHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  greetingTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  avatarButton: {
+    padding: 2,
+    borderRadius: radii.full,
+    borderWidth: 2,
+    borderColor: colors.brand.primaryLight,
+  },
+  avatarButtonPressed: {
+    opacity: 0.75,
   },
   greetingTitle: {
     fontSize: 28,

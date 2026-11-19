@@ -31,7 +31,11 @@ export type IconName =
   | "edit"
   | "close"
   | "sparkles"
-  | "more";
+  | "more"
+  | "settings"
+  | "logout"
+  | "shield"
+  | "info";
 
 interface SymbolMapping {
   ios: SFSymbol;
@@ -179,6 +183,26 @@ const ICON_MAP: Record<IconName, SymbolMapping> = {
     ios: "ellipsis",
     android: "more_horiz",
     web: "more_horiz",
+  },
+  settings: {
+    ios: "gearshape",
+    android: "settings",
+    web: "settings",
+  },
+  logout: {
+    ios: "rectangle.portrait.and.arrow.right",
+    android: "logout",
+    web: "logout",
+  },
+  shield: {
+    ios: "shield",
+    android: "shield",
+    web: "shield",
+  },
+  info: {
+    ios: "info.circle",
+    android: "info",
+    web: "info",
   },
 };
 

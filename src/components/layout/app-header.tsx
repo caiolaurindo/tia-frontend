@@ -11,7 +11,9 @@ export interface AppHeaderProps {
   onBackPress?: () => void;
   onLogoPress?: () => void;
   onNotificationPress?: () => void;
+  onSettingsPress?: () => void;
   hasUnreadNotifications?: boolean;
+  showSettings?: boolean;
 }
 
 export function AppHeader({
@@ -19,7 +21,9 @@ export function AppHeader({
   onBackPress,
   onLogoPress,
   onNotificationPress,
+  onSettingsPress,
   hasUnreadNotifications = false,
+  showSettings = false,
 }: AppHeaderProps) {
   return (
     <View style={styles.container}>
@@ -55,16 +59,30 @@ export function AppHeader({
         {title}
       </Text>
 
-      <Pressable
-        onPress={onNotificationPress}
-        hitSlop={8}
-        style={styles.notificationButton}
-        accessibilityRole="button"
-        accessibilityLabel="Notificações"
-      >
-        <Icon name="bell" size={18} color={colors.icon.default} />
-        {hasUnreadNotifications ? <View style={styles.unreadDot} /> : null}
-      </Pressable>
+      <View style={styles.rightRow}>
+        <Pressable
+          onPress={onNotificationPress}
+          hitSlop={8}
+          style={styles.headerIconButton}
+          accessibilityRole="button"
+          accessibilityLabel="Notificações"
+        >
+          <Icon name="bell" size={18} color={colors.icon.default} />
+          {hasUnreadNotifications ? <View style={styles.unreadDot} /> : null}
+        </Pressable>
+
+        {showSettings ? (
+          <Pressable
+            onPress={onSettingsPress}
+            hitSlop={8}
+            style={styles.headerIconButton}
+            accessibilityRole="button"
+            accessibilityLabel="Configurações e Perfil"
+          >
+            <Icon name="settings" size={18} color={colors.icon.default} />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -85,6 +103,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     minWidth: 40,
+  },
+  rightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minWidth: 40,
+    justifyContent: "flex-end",
   },
   backButton: {
     width: 34,
@@ -112,7 +137,7 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     paddingHorizontal: spacing.sm,
   },
-  notificationButton: {
+  headerIconButton: {
     width: 36,
     height: 36,
     borderRadius: radii.full,
