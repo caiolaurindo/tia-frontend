@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppShell } from "@/components/layout";
 import { Button } from "@/components/ui";
@@ -19,28 +20,45 @@ const turnos = ["Manhã", "Tarde", "Noite"];
 
 export function TurmaFormScreen() {
   const router = useRouter();
-  const { createTurma } = useTurmasContext();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { getTurmaById, createTurma, updateTurma } = useTurmasContext();
 
-  const [nome, setNome] = useState("");
-  const [serie, setSerie] = useState("");
-  const [anoLetivo, setAnoLetivo] = useState("2026");
-  const [faixaEtaria, setFaixaEtaria] = useState("");
-  const [turno, setTurno] = useState("");
-  const [descricao, setDescricao] = useState("");
+  const existingTurma = id ? getTurmaById(id) : undefined;
+  const isEditing = Boolean(existingTurma);
+
+  const [nome, setNome] = useState(existingTurma?.nome ?? "");
+  const [serie, setSerie] = useState(existingTurma?.serie ?? "");
+  const [anoLetivo, setAnoLetivo] = useState(
+    existingTurma ? String(existingTurma.anoLetivo) : "2026"
+  );
+  const [faixaEtaria, setFaixaEtaria] = useState(
+    existingTurma?.faixaEtaria ?? ""
+  );
+  const [turno, setTurno] = useState(existingTurma?.turno ?? "");
+  const [descricao, setDescricao] = useState(existingTurma?.descricao ?? "");
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  function notifyError(title: string, message: string) {
+    setFormError(message);
+    if (Platform.OS !== "web") {
+      Alert.alert(title, message);
+    }
+  }
 
   async function handleSave() {
     if (isSaving) return;
+    setFormError(null);
 
     const ano = Number(anoLetivo);
 
     if (!nome.trim()) {
-      Alert.alert("Atenção", "Informe o nome da turma.");
+      notifyError("Atenção", "Informe o nome da turma.");
       return;
     }
 
     if (!serie.trim()) {
-      Alert.alert("Atenção", "Informe a série da turma.");
+      notifyError("Atenção", "Informe a série da turma.");
       return;
     }
 
@@ -49,59 +67,75 @@ export function TurmaFormScreen() {
       !Number.isInteger(ano) ||
       ano < 2000
     ) {
-      Alert.alert("Atenção", "Informe um ano letivo válido.");
-      return;
-    }
-
-    if (!faixaEtaria.trim()) {
-      Alert.alert("Atenção", "Informe a faixa etária.");
-      return;
-    }
-
-    if (!turno) {
-      Alert.alert("Atenção", "Selecione o turno.");
+      notifyError("Atenção", "Informe um ano letivo válido.");
       return;
     }
 
     try {
       setIsSaving(true);
 
-      await createTurma({
+      const payload = {
         nome: nome.trim(),
         serie: serie.trim(),
         anoLetivo: ano,
         faixaEtaria: faixaEtaria.trim(),
         turno,
         descricao: descricao.trim(),
-      });
+      };
 
-      Alert.alert("Sucesso", "Turma cadastrada com sucesso!", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/turmas"),
-        },
-      ]);
+      if (isEditing && existingTurma) {
+        await updateTurma(existingTurma.id, payload);
+      } else {
+        await createTurma(payload);
+      }
+
+      if (Platform.OS === "web") {
+        router.replace("/turmas");
+      } else {
+        Alert.alert(
+          "Sucesso",
+          isEditing
+            ? "Turma atualizada com sucesso!"
+            : "Turma cadastrada com sucesso!",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/turmas"),
+            },
+          ]
+        );
+      }
     } catch (erro) {
       const mensagem =
         erro instanceof Error
           ? erro.message
-          : "Não foi possível cadastrar a turma.";
+          : "Não foi possível salvar a turma.";
 
-      Alert.alert("Erro ao cadastrar", mensagem);
+      notifyError("Erro ao salvar", mensagem);
     } finally {
       setIsSaving(false);
     }
   }
 
   return (
-    <AppShell title="Nova turma" activeTab="turmas">
+    <AppShell
+      title={isEditing ? "Editar turma" : "Nova turma"}
+      onBackPress={() => router.back()}
+      activeTab="turmas"
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Cadastrar turma</Text>
+        <Text style={styles.title}>
+          {isEditing ? "Editar turma" : "Cadastrar turma"}
+        </Text>
 
         <Text style={styles.subtitle}>
-          Preencha as informações para adicionar uma nova turma.
+          {isEditing
+            ? "Atualize as informações desta turma."
+            : "Preencha as informações para adicionar uma nova turma."}
         </Text>
       </View>
+
+      {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
       <View style={styles.form}>
         <View style={styles.field}>
@@ -202,8 +236,14 @@ export function TurmaFormScreen() {
 
         <View style={styles.actions}>
           <Button
-            title={isSaving ? "Salvando..." : "Salvar turma"}
-            onPress={handleSave}
+            title={
+              isSaving
+                ? "Salvando..."
+                : isEditing
+                  ? "Salvar alterações"
+                  : "Salvar turma"
+            }
+            onPress={() => void handleSave()}
           />
 
           <Button
@@ -303,5 +343,11 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.md,
     marginTop: spacing.sm,
+  },
+
+  errorText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text.danger,
   },
 });

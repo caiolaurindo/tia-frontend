@@ -29,6 +29,7 @@ interface TurmasContextData {
   refreshTurmas: () => Promise<void>;
   createTurma: (input: NewTurmaInput) => Promise<void>;
   updateTurma: (id: string, input: NewTurmaInput) => Promise<void>;
+  deleteTurma: (id: string) => Promise<void>;
   updateTurmaStatus: (id: string, status: TurmaStatus) => void;
 }
 
@@ -102,7 +103,12 @@ export function TurmasProvider({
         anoLetivo: input.anoLetivo,
       });
 
-      const novaTurma = mapearTurma(resposta);
+      const novaTurma: Turma = {
+        ...mapearTurma(resposta),
+        faixaEtaria: input.faixaEtaria,
+        turno: input.turno,
+        descricao: input.descricao ?? "",
+      };
 
       setTurmas((current) => [novaTurma, ...current]);
     },
@@ -117,16 +123,26 @@ export function TurmasProvider({
         anoLetivo: input.anoLetivo,
       });
 
-      const turmaAtualizada = mapearTurma(resposta);
+      const turmaAtualizada: Turma = {
+        ...mapearTurma(resposta),
+        faixaEtaria: input.faixaEtaria,
+        turno: input.turno,
+        descricao: input.descricao ?? "",
+      };
 
       setTurmas((current) =>
         current.map((turma) =>
-          turma.id === id ? turmaAtualizada : turma
+          turma.id === id ? { ...turma, ...turmaAtualizada } : turma
         )
       );
     },
     []
   );
+
+  const deleteTurma = useCallback(async (id: string) => {
+    await turmaService.remover(id);
+    setTurmas((current) => current.filter((turma) => turma.id !== id));
+  }, []);
 
   const updateTurmaStatus = useCallback(
     (id: string, status: TurmaStatus) => {
@@ -149,6 +165,7 @@ export function TurmasProvider({
         refreshTurmas,
         createTurma,
         updateTurma,
+        deleteTurma,
         updateTurmaStatus,
       }}
     >

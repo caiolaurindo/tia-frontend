@@ -18,6 +18,7 @@ interface AulasContextValue {
   getLessonById: (lessonId?: string) => LessonItem | undefined;
   createLesson: (input: NewLessonInput) => Promise<LessonItem>;
   updateLesson: (lessonId: string, input: NewLessonInput) => Promise<void>;
+  deleteLesson: (lessonId: string) => Promise<void>;
   startLesson: (lessonId: string) => void;
   finishLesson: (
     lessonId: string,
@@ -42,6 +43,13 @@ interface AulasContextValue {
 
 const AulasContext = createContext<AulasContextValue | null>(null);
 
+function getDayOfWeekFromIso(dateIso: string): number {
+  const [y, m, d] = dateIso.split("-").map(Number);
+  if (!y || !m || !d) return 0;
+  const jsDay = new Date(y, m - 1, d, 12, 0, 0).getDay();
+  return jsDay === 0 ? 4 : Math.min(4, jsDay - 1);
+}
+
 function mapearAula(aulaApi: AulaApi): LessonItem {
   const dateIso = aulaApi.data ? String(aulaApi.data).slice(0, 10) : new Date().toISOString().slice(0, 10);
   const turmaId =
@@ -59,7 +67,7 @@ function mapearAula(aulaApi: AulaApi): LessonItem {
     classGroup: aulaApi.turma?.nome ?? "",
     grade: aulaApi.turma?.serie ?? "",
     dateLabel: dateIso.split("-").reverse().join("/"),
-    dayOfWeek: 4,
+    dayOfWeek: getDayOfWeekFromIso(dateIso),
     startTime: "10:00",
     endTime: "11:00",
     status: "planejada",
@@ -203,6 +211,17 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const deleteLesson = useCallback(async (lessonId: string) => {
+    await aulaService.remover(lessonId);
+    setLessons((prev) => {
+      const restantes = prev.filter((item) => item.id !== lessonId);
+      setSelectedLessonId((current) =>
+        current === lessonId ? (restantes[0]?.id ?? "") : current
+      );
+      return restantes;
+    });
+  }, []);
+
   const startLesson = useCallback((lessonId: string) => {
     setSelectedLessonId(lessonId);
     setLessons((prev) =>
@@ -317,6 +336,7 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
       getLessonById,
       createLesson,
       updateLesson,
+      deleteLesson,
       startLesson,
       finishLesson,
       toggleStudentObservation,
@@ -332,6 +352,7 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
       getLessonById,
       createLesson,
       updateLesson,
+      deleteLesson,
       startLesson,
       finishLesson,
       toggleStudentObservation,

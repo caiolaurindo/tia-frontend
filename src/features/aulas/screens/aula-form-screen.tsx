@@ -1,5 +1,5 @@
-import React from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useState } from "react";
+import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card, Icon, TextField } from "@/components/ui";
@@ -10,7 +10,7 @@ import { useLessonForm } from "../hooks/use-lesson-form";
 
 export function AulaFormScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string; turmaId?: string }>();
   const { lessons } = useAulasContext();
   const { conquistas } = useConquistasContext();
 
@@ -19,6 +19,7 @@ export function AulaFormScreen() {
     : undefined;
 
   const isEditing = Boolean(existingLesson);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     turmas,
@@ -26,6 +27,8 @@ export function AulaFormScreen() {
     setTitle,
     groupIndex,
     setGroupIndex,
+    dateInput,
+    setDateInput,
     startTime,
     setStartTime,
     endTime,
@@ -42,11 +45,13 @@ export function AulaFormScreen() {
     errors,
     isSaving,
     saveLesson,
-  } = useLessonForm(existingLesson);
+    removeLesson,
+  } = useLessonForm(existingLesson, params.turmaId);
 
   const activeConquistas = conquistas.filter((c) => c.ativa);
 
   const handleSave = async () => {
+    setSubmitError(null);
     try {
       const saved = await saveLesson();
       if (saved) {
@@ -57,8 +62,47 @@ export function AulaFormScreen() {
         erro instanceof Error
           ? erro.message
           : "Não foi possível salvar a aula.";
-      Alert.alert("Erro ao salvar", mensagem);
+      setSubmitError(mensagem);
+      if (Platform.OS !== "web") {
+        Alert.alert("Erro ao salvar", mensagem);
+      }
     }
+  };
+
+  const handleDelete = async () => {
+    setSubmitError(null);
+
+    const executarExclusao = async () => {
+      try {
+        const removed = await removeLesson();
+        if (removed) {
+          router.replace("/aulas");
+        }
+      } catch (erro) {
+        const mensagem =
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível excluir a aula.";
+        setSubmitError(mensagem);
+        if (Platform.OS !== "web") {
+          Alert.alert("Erro ao excluir", mensagem);
+        }
+      }
+    };
+
+    if (Platform.OS === "web") {
+      await executarExclusao();
+      return;
+    }
+
+    Alert.alert("Excluir aula", "Deseja realmente excluir esta aula?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Excluir",
+        style: "destructive",
+        onPress: () => void executarExclusao(),
+      },
+    ]);
   };
 
   return (
@@ -68,8 +112,12 @@ export function AulaFormScreen() {
       onLogoPress={() => router.push("/aulas")}
       showBottomBar={false}
     >
+      {submitError ? (
+        <Text style={styles.errorText}>{submitError}</Text>
+      ) : null}
+
       <Card style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>1. Turma e horário</Text>
+        <Text style={styles.sectionTitle}>1. Turma, data e horário</Text>
 
         {turmas.length === 0 ? (
           <Button
@@ -111,6 +159,19 @@ export function AulaFormScreen() {
             })}
           </View>
         )}
+
+        {errors.turma ? (
+          <Text style={styles.errorText}>{errors.turma}</Text>
+        ) : null}
+
+        <TextField
+          label="Data da aula (DD/MM/AAAA)"
+          leftIcon="calendar"
+          placeholder="20/11/2026"
+          value={dateInput}
+          onChangeText={setDateInput}
+          error={errors.date}
+        />
 
         <View style={styles.timeRow}>
           <TextField
@@ -241,6 +302,15 @@ export function AulaFormScreen() {
           style={styles.flexBtn}
         />
       </View>
+
+      {isEditing ? (
+        <Button
+          title={isSaving ? "Aguarde..." : "Excluir aula"}
+          variant="ghost"
+          onPress={() => void handleDelete()}
+          disabled={isSaving}
+        />
+      ) : null}
     </AppShell>
   );
 }
@@ -361,5 +431,10 @@ const styles = StyleSheet.create({
   },
   flexBtn: {
     flex: 1,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: colors.text.danger,
   },
 });

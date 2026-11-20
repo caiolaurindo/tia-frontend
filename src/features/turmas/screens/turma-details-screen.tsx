@@ -1,6 +1,9 @@
 
-import React from "react";
+import React, { useState } from "react";
 import {
+  Alert,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -9,7 +12,8 @@ import { Href, useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
-import { colors, spacing } from "@/theme";
+import { useAulasContext } from "@/features/aulas";
+import { colors, radii, spacing } from "@/theme";
 
 import { useTurmasContext } from "../context/turmas-context";
 
@@ -18,7 +22,9 @@ export function TurmaDetailsScreen() {
 
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { getTurmaById } = useTurmasContext();
+  const { getTurmaById, deleteTurma } = useTurmasContext();
+  const { lessons, selectLesson } = useAulasContext();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const turma = getTurmaById(id);
 
@@ -42,9 +48,55 @@ export function TurmaDetailsScreen() {
   }
 
   const isAtiva = turma.status === "ativa";
+  const aulasDaTurma = lessons.filter(
+    (lesson) =>
+      lesson.turmaId === turma.id || lesson.classGroup === turma.nome
+  );
+
+  async function confirmDelete() {
+    if (!turma || isDeleting) return;
+
+    const executarExclusao = async () => {
+      try {
+        setIsDeleting(true);
+        await deleteTurma(turma.id);
+        router.replace("/turmas");
+      } catch (erro) {
+        const mensagem =
+          erro instanceof Error
+            ? erro.message
+            : "Não foi possível excluir a turma.";
+        Alert.alert("Erro ao excluir", mensagem);
+      } finally {
+        setIsDeleting(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      await executarExclusao();
+      return;
+    }
+
+    Alert.alert(
+      "Excluir turma",
+      `Deseja realmente excluir a turma "${turma.nome}"?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: () => void executarExclusao(),
+        },
+      ]
+    );
+  }
 
   return (
-    <AppShell title="Detalhes da turma" activeTab="turmas">
+    <AppShell
+      title="Detalhes da turma"
+      onBackPress={() => router.back()}
+      activeTab="turmas"
+    >
       <View style={styles.header}>
         <Text style={styles.title}>{turma.nome}</Text>
 
@@ -80,15 +132,19 @@ export function TurmaDetailsScreen() {
           <Text style={styles.infoValue}>{turma.anoLetivo}</Text>
         </View>
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Faixa etária</Text>
-          <Text style={styles.infoValue}>{turma.faixaEtaria}</Text>
-        </View>
+        {turma.faixaEtaria ? (
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Faixa etária</Text>
+            <Text style={styles.infoValue}>{turma.faixaEtaria}</Text>
+          </View>
+        ) : null}
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Turno</Text>
-          <Text style={styles.infoValue}>{turma.turno}</Text>
-        </View>
+        {turma.turno ? (
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Turno</Text>
+            <Text style={styles.infoValue}>{turma.turno}</Text>
+          </View>
+        ) : null}
 
         {turma.descricao ? (
           <View style={styles.infoItem}>
@@ -98,17 +154,81 @@ export function TurmaDetailsScreen() {
         ) : null}
       </Card>
 
+      <Card style={styles.card}>
+        <View style={styles.statusRow}>
+          <Text style={styles.sectionTitle}>
+            Aulas da turma ({aulasDaTurma.length})
+          </Text>
+
+          <Pressable onPress={() => router.push("/aulas")}>
+            <Text style={styles.linkText}>Ver agenda</Text>
+          </Pressable>
+        </View>
+
+        {aulasDaTurma.length === 0 ? (
+          <Text style={styles.infoLabel}>
+            Nenhuma aula cadastrada para esta turma ainda.
+          </Text>
+        ) : (
+          <View style={styles.aulasList}>
+            {aulasDaTurma.map((aula) => (
+              <Pressable
+                key={aula.id}
+                onPress={() => {
+                  selectLesson(aula.id);
+                  router.push({
+                    pathname: "/aulas/[id]/editar",
+                    params: { id: aula.id },
+                  });
+                }}
+                style={styles.aulaRow}
+              >
+                <View style={styles.aulaInfo}>
+                  <Text style={styles.aulaTitle} numberOfLines={1}>
+                    {aula.title}
+                  </Text>
+                  <Text style={styles.infoLabel} numberOfLines={1}>
+                    {aula.dateLabel} · {aula.startTime}
+                  </Text>
+                </View>
+
+                <Badge label="Editar" variant="blue" />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        <Button
+          title="+ Nova aula para esta turma"
+          onPress={() =>
+            router.push({
+              pathname: "/aulas/nova",
+              params: { turmaId: turma.id },
+            })
+          }
+        />
+      </Card>
+
       <View style={styles.actions}>
         <Button
+          title="Editar turma"
+          variant="secondary"
+          onPress={() =>
+            router.push(`/turmas/editar/${turma.id}` as Href)
+          }
+        />
+        <Button
           title="Ver relatório semanal"
+          variant="secondary"
           onPress={() =>
             router.push(`/relatorios?turmaId=${turma.id}` as Href)
           }
         />
         <Button
-          title="Voltar para turmas"
-          variant="secondary"
-          onPress={() => router.back()}
+          title={isDeleting ? "Excluindo..." : "Excluir turma"}
+          variant="ghost"
+          onPress={() => void confirmDelete()}
+          disabled={isDeleting}
         />
       </View>
     </AppShell>
@@ -176,5 +296,36 @@ const styles = StyleSheet.create({
 
   emptyContainer: {
     gap: spacing.md,
+  },
+
+  linkText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.brand.primary,
+  },
+
+  aulasList: {
+    gap: spacing.sm,
+  },
+
+  aulaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.xl,
+    backgroundColor: colors.background.primary,
+  },
+
+  aulaInfo: {
+    flex: 1,
+    gap: 2,
+  },
+
+  aulaTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text.primary,
   },
 });
