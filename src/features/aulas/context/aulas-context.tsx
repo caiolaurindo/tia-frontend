@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts";
-import { useTurmasContext } from "@/features/turmas";
+import { useTurmasContext } from "@/features/turmas/context/turmas-context";
 import { AulaApi, aulaService } from "@/services";
 import {
   LessonItem,
@@ -60,10 +60,10 @@ function mapearAula(aulaApi: AulaApi): LessonItem {
         : undefined;
 
   return {
-    id: String(aulaApi.id),
+    id: String(aulaApi.id ?? ""),
     turmaId,
     dateIso,
-    title: aulaApi.nome,
+    title: aulaApi.nome ?? "",
     classGroup: aulaApi.turma?.nome ?? "",
     grade: aulaApi.turma?.serie ?? "",
     dateLabel: dateIso.split("-").reverse().join("/"),

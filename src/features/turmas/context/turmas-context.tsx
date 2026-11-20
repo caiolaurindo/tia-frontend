@@ -39,10 +39,10 @@ const TurmasContext = createContext<TurmasContextData>(
 
 function mapearTurma(turmaApi: TurmaApi): Turma {
   return {
-    id: String(turmaApi.id),
-    nome: turmaApi.nome,
-    serie: turmaApi.serie,
-    anoLetivo: turmaApi.anoLetivo,
+    id: String(turmaApi.id ?? ""),
+    nome: turmaApi.nome ?? "",
+    serie: turmaApi.serie ?? "",
+    anoLetivo: Number(turmaApi.anoLetivo ?? new Date().getFullYear()),
     faixaEtaria: "",
     turno: "",
     descricao: "",

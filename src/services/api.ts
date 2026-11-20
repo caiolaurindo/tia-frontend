@@ -122,13 +122,16 @@ export async function apiRequest<T>(
   const payload = hasJson ? await response.json() : await response.text();
 
   if (!response.ok) {
+    const payloadObj =
+      typeof payload === "object" && payload !== null
+        ? (payload as { message?: string; mensagem?: string; error?: string })
+        : null;
+
     const message =
-      (typeof payload === "object" &&
-        payload !== null &&
-        ("message" in payload || "error" in payload) &&
+      (payloadObj &&
+        (payloadObj.message || payloadObj.mensagem || payloadObj.error) &&
         String(
-          (payload as { message?: string; error?: string }).message ??
-            (payload as { error?: string }).error
+          payloadObj.message ?? payloadObj.mensagem ?? payloadObj.error
         )) ||
       `Erro na requisição (${response.status})`;
 

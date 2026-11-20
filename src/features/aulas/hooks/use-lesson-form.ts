@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useTurmasContext } from "@/features/turmas";
+import { useTurmasContext } from "@/features/turmas/context/turmas-context";
 import { TagColorVariant } from "@/theme";
 import { useAulasContext } from "../context/aulas-context";
 import {

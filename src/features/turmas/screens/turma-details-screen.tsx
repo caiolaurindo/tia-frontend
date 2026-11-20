@@ -12,7 +12,7 @@ import { Href, useLocalSearchParams, useRouter } from "expo-router";
 
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
-import { useAulasContext } from "@/features/aulas";
+import { useAulasContext } from "@/features/aulas/context/aulas-context";
 import { colors, radii, spacing } from "@/theme";
 
 import { useTurmasContext } from "../context/turmas-context";

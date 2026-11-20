@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useTurmasContext } from "@/features/turmas";
+import { useTurmasContext } from "@/features/turmas/context/turmas-context";
 import { colors, radii, spacing } from "@/theme";
 
 const WEEK_DAYS = [

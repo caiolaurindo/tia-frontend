@@ -17,17 +17,46 @@ export interface AulaPayload {
   turmaId: number;
 }
 
+function extrairListaAulas(resposta: unknown): AulaApi[] {
+  if (Array.isArray(resposta)) return resposta as AulaApi[];
+  if (resposta && typeof resposta === "object") {
+    const obj = resposta as Record<string, unknown>;
+    for (const key of ["data", "dados", "aulas", "items", "itens", "results"]) {
+      if (Array.isArray(obj[key])) return obj[key] as AulaApi[];
+    }
+    if (obj.data && typeof obj.data === "object") {
+      return extrairListaAulas(obj.data);
+    }
+  }
+  return [];
+}
+
+function extrairAula(resposta: unknown): AulaApi {
+  if (resposta && typeof resposta === "object") {
+    const obj = resposta as Record<string, unknown>;
+    for (const key of ["aula", "dados"]) {
+      if (obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])) {
+        return obj[key] as AulaApi;
+      }
+    }
+    if (obj.data && typeof obj.data === "object" && !Array.isArray(obj.data)) {
+      return obj.data as AulaApi;
+    }
+  }
+  return resposta as AulaApi;
+}
+
 export const aulaService = {
-  listar: () => api.get<AulaApi[]>("/aulas"),
+  listar: async () => extrairListaAulas(await api.get<unknown>("/aulas")),
 
-  buscarPorId: (id: string | number) =>
-    api.get<AulaApi>(`/aulas/${id}`),
+  buscarPorId: async (id: string | number) =>
+    extrairAula(await api.get<unknown>(`/aulas/${id}`)),
 
-  criar: (dados: AulaPayload) =>
-    api.post<AulaApi>("/aulas", dados),
+  criar: async (dados: AulaPayload) =>
+    extrairAula(await api.post<unknown>("/aulas", dados)),
 
-  atualizar: (id: string | number, dados: Partial<AulaPayload>) =>
-    api.put<AulaApi>(`/aulas/${id}`, dados),
+  atualizar: async (id: string | number, dados: Partial<AulaPayload>) =>
+    extrairAula(await api.put<unknown>(`/aulas/${id}`, dados)),
 
   remover: (id: string | number) =>
     api.delete<void>(`/aulas/${id}`),
