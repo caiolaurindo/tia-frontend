@@ -7,7 +7,7 @@ import { normalizarTexto } from "../utils/conquistas-progress";
 export function useConquistas() {
   const { conquistas, turmas } = useConquistasContext();
 
-  const [turma, setTurma] = useState<TurmaFiltro>(turmas[0]?.id ?? TURMA_TODAS);
+  const [turma, setTurma] = useState<TurmaFiltro>(TURMA_TODAS);
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<ConquistaCategoria | null>(null);
 
@@ -17,10 +17,12 @@ export function useConquistas() {
     const termo = normalizarTexto(busca);
     return ativas.filter(
       (c) =>
+        // numa turma específica, só as conquistas vinculadas a ela
+        (turma === TURMA_TODAS || c.progressoPorTurma[turma] !== undefined) &&
         (!categoria || c.categoria === categoria) &&
         normalizarTexto(c.nome).includes(termo),
     );
-  }, [ativas, categoria, busca]);
+  }, [ativas, turma, categoria, busca]);
 
   const sugestoes = useMemo(
     () => SUGESTOES.filter((s) => !ativas.some((a) => a.nome === s.nome)),

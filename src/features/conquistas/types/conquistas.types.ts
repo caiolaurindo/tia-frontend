@@ -36,4 +36,5 @@ export interface NovaConquistaInput {
   nome: string;
   categoria: ConquistaCategoria;
   nivel?: string;
+  turmaIds?: string[];
 }

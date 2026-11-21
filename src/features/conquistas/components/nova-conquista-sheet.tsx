@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "@/theme";
+import { useConquistasContext } from "../context/conquistas-context";
 import { CATEGORIAS, CATEGORIA_LABEL } from "../data/conquistas-options";
 import { useNovaConquistaForm } from "../hooks/use-nova-conquista-form";
 import { NovaConquistaInput } from "../types/conquistas.types";
@@ -19,7 +20,7 @@ import { ConquistaChip } from "./conquista-chip";
 export interface NovaConquistaSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (input: NovaConquistaInput) => void;
+  onSave: (input: NovaConquistaInput) => void | Promise<void>;
 }
 
 export function NovaConquistaSheet({
@@ -28,7 +29,8 @@ export function NovaConquistaSheet({
   onSave,
 }: NovaConquistaSheetProps) {
   const insets = useSafeAreaInsets();
-  const form = useNovaConquistaForm(onSave);
+  const { turmas } = useConquistasContext();
+  const form = useNovaConquistaForm(onSave, turmas);
 
   useEffect(() => {
     if (!visible) form.reset();
@@ -103,14 +105,53 @@ export function NovaConquistaSheet({
             />
           </View>
 
+          <View style={styles.field}>
+            <Text style={styles.label}>Turmas</Text>
+            {turmas.length === 0 ? (
+              <Text style={styles.hint}>
+                Nenhuma turma cadastrada ainda. A conquista será salva sem
+                turma.
+              </Text>
+            ) : (
+              <>
+                <View style={styles.chips}>
+                  {turmas.map((turma) => (
+                    <ConquistaChip
+                      key={turma.id}
+                      label={turma.rotulo}
+                      selected={form.turmaIds.includes(turma.id)}
+                      onPress={() => form.alternarTurma(turma.id)}
+                    />
+                  ))}
+                </View>
+                {form.turmaIds.length === 0 ? (
+                  <Text style={styles.hint}>
+                    Selecione ao menos uma turma.
+                  </Text>
+                ) : null}
+              </>
+            )}
+          </View>
+
+          {form.erro ? (
+            <Text style={styles.erro} accessibilityRole="alert">
+              {form.erro}
+            </Text>
+          ) : null}
+
           <Pressable
             onPress={form.submit}
-            disabled={!form.valido}
+            disabled={!form.valido || form.salvando}
             accessibilityRole="button"
-            accessibilityState={{ disabled: !form.valido }}
-            style={[styles.save, !form.valido && styles.saveDisabled]}
+            accessibilityState={{ disabled: !form.valido || form.salvando }}
+            style={[
+              styles.save,
+              (!form.valido || form.salvando) && styles.saveDisabled,
+            ]}
           >
-            <Text style={styles.saveText}>Salvar conquista</Text>
+            <Text style={styles.saveText}>
+              {form.salvando ? "Salvando..." : "Salvar conquista"}
+            </Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -153,6 +194,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   optional: { fontWeight: "500", color: colors.text.secondary },
+  hint: {
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
+  },
+  erro: {
+    fontSize: 13,
+    color: colors.text.danger,
+    marginBottom: spacing.sm,
+  },
   input: {
     backgroundColor: colors.background.primary,
     borderWidth: 1,
