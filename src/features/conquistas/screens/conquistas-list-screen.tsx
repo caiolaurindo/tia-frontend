@@ -10,7 +10,10 @@ import { ConquistasLegend } from "../components/conquistas-legend";
 import { ConquistasPageHeader } from "../components/conquistas-page-header";
 import { ConquistasToast } from "../components/conquistas-toast";
 import { NovaConquistaSheet } from "../components/nova-conquista-sheet";
-import { useConquistasContext } from "../context/conquistas-context";
+import {
+  useConquistasContext,
+  VinculoParcialError,
+} from "../context/conquistas-context";
 import { TURMA_TODAS } from "../data/conquistas-options";
 import { useConquistas } from "../hooks/use-conquistas";
 import { Conquista, NovaConquistaInput } from "../types/conquistas.types";
@@ -44,24 +47,40 @@ export function ConquistasListScreen() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
-  const handleSalvar = (input: NovaConquistaInput) => {
-    adicionarConquista(input);
+  const handleSalvar = async (input: NovaConquistaInput) => {
+    try {
+      await adicionarConquista(input);
+      setToast({ message: "Conquista salva" });
+    } catch (e) {
+      // erro comum (ex.: nome duplicado): o formulário mostra a mensagem
+      if (!(e instanceof VinculoParcialError)) throw e;
+      setToast({ message: e.message });
+    }
     setSheetAberto(false);
-    setToast({ message: "Conquista salva" });
   };
 
-  const handleSugestao = (input: NovaConquistaInput) => {
-    adicionarConquista(input);
-    setToast({ message: "Conquista salva" });
+  const handleSugestao = async (input: NovaConquistaInput) => {
+    try {
+      await adicionarConquista(input);
+      setToast({ message: "Conquista salva" });
+    } catch (e) {
+      setToast({
+        message: e instanceof Error ? e.message : "Não foi possível salvar",
+      });
+    }
   };
 
-  const handleArquivar = (conquista: Conquista) => {
-    arquivarConquista(conquista.id);
-    setToast({
-      message: "Conquista arquivada",
-      actionLabel: "Desfazer",
-      onAction: () => restaurarConquista(conquista.id),
-    });
+  const handleArquivar = async (conquista: Conquista) => {
+    try {
+      await arquivarConquista(conquista.id);
+      setToast({
+        message: "Conquista arquivada",
+        actionLabel: "Desfazer",
+        onAction: () => restaurarConquista(conquista.id),
+      });
+    } catch (e) {
+      setToast({ message: e instanceof Error ? e.message : String(e) });
+    }
   };
 
   const handleMais = (conquista: Conquista) => {
