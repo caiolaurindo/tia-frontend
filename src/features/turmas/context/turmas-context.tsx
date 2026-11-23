@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useCallback,
@@ -30,7 +29,10 @@ interface TurmasContextData {
   createTurma: (input: NewTurmaInput) => Promise<void>;
   updateTurma: (id: string, input: NewTurmaInput) => Promise<void>;
   deleteTurma: (id: string) => Promise<void>;
-  updateTurmaStatus: (id: string, status: TurmaStatus) => void;
+  updateTurmaStatus: (
+    id: string,
+    status: TurmaStatus
+  ) => Promise<void>;
 }
 
 const TurmasContext = createContext<TurmasContextData>(
@@ -42,11 +44,13 @@ function mapearTurma(turmaApi: TurmaApi): Turma {
     id: String(turmaApi.id ?? ""),
     nome: turmaApi.nome ?? "",
     serie: turmaApi.serie ?? "",
-    anoLetivo: Number(turmaApi.anoLetivo ?? new Date().getFullYear()),
+    anoLetivo: Number(
+      turmaApi.anoLetivo ?? new Date().getFullYear()
+    ),
     faixaEtaria: "",
     turno: "",
     descricao: "",
-    status: "ativa",
+    status: turmaApi.arquivada ? "arquivada" : "ativa",
   };
 }
 
@@ -132,7 +136,9 @@ export function TurmasProvider({
 
       setTurmas((current) =>
         current.map((turma) =>
-          turma.id === id ? { ...turma, ...turmaAtualizada } : turma
+          turma.id === id
+            ? { ...turma, ...turmaAtualizada }
+            : turma
         )
       );
     },
@@ -141,14 +147,26 @@ export function TurmasProvider({
 
   const deleteTurma = useCallback(async (id: string) => {
     await turmaService.remover(id);
-    setTurmas((current) => current.filter((turma) => turma.id !== id));
+
+    setTurmas((current) =>
+      current.filter((turma) => turma.id !== id)
+    );
   }, []);
 
   const updateTurmaStatus = useCallback(
-    (id: string, status: TurmaStatus) => {
+    async (id: string, status: TurmaStatus) => {
+      const resposta = await turmaService.atualizarArquivamento(
+        id,
+        status === "arquivada"
+      );
+
+      const turmaAtualizada = mapearTurma(resposta);
+
       setTurmas((current) =>
         current.map((turma) =>
-          turma.id === id ? { ...turma, status } : turma
+          turma.id === id
+            ? { ...turma, status: turmaAtualizada.status }
+            : turma
         )
       );
     },

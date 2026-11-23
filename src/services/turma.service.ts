@@ -5,6 +5,7 @@ export interface TurmaApi {
   nome: string;
   serie: string;
   anoLetivo: number;
+  arquivada: boolean;
 }
 
 export interface TurmaPayload {
@@ -15,32 +16,39 @@ export interface TurmaPayload {
 
 function extrairListaTurmas(resposta: unknown): TurmaApi[] {
   if (Array.isArray(resposta)) return resposta as TurmaApi[];
+
   if (resposta && typeof resposta === "object") {
     const obj = resposta as Record<string, unknown>;
+
     for (const key of ["data", "dados", "turmas", "items", "itens", "results"]) {
       if (Array.isArray(obj[key])) return obj[key] as TurmaApi[];
     }
+
     if (obj.data && typeof obj.data === "object") {
       return extrairListaTurmas(obj.data);
     }
   }
+
   return [];
 }
 
 function extrairTurma(resposta: unknown): TurmaApi {
   if (resposta && typeof resposta === "object") {
     const obj = resposta as Record<string, unknown>;
+
     for (const key of ["turma", "dados", "data"]) {
       if (obj[key] && typeof obj[key] === "object" && !Array.isArray(obj[key])) {
         return obj[key] as TurmaApi;
       }
     }
   }
+
   return resposta as TurmaApi;
 }
 
 export const turmaService = {
-  listar: async () => extrairListaTurmas(await api.get<unknown>("/turmas")),
+  listar: async () =>
+    extrairListaTurmas(await api.get<unknown>("/turmas")),
 
   buscarPorId: async (id: string | number) =>
     extrairTurma(await api.get<unknown>(`/turmas/${id}`)),
@@ -50,6 +58,11 @@ export const turmaService = {
 
   atualizar: async (id: string | number, dados: Partial<TurmaPayload>) =>
     extrairTurma(await api.put<unknown>(`/turmas/${id}`, dados)),
+
+  atualizarArquivamento: async (id: string | number, arquivada: boolean) =>
+    extrairTurma(
+      await api.patch<unknown>(`/turmas/${id}/arquivamento`, { arquivada })
+    ),
 
   remover: (id: string | number) =>
     api.delete<void>(`/turmas/${id}`),
