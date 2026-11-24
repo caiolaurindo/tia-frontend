@@ -1,135 +1,424 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  StyleSheet, 
-  SafeAreaView 
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { CategoriaRegistro, DetalheRapido } from '../types/registros.types';
+import { ApiError } from '@/services/api';
+import { AulaApi, aulaService } from '@/services/aula.service';
+import { RegistroPayload, registroService } from '@/services/registro.service';
+
+function formatarDataISO(date = new Date()): string {
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, '0');
+  const dia = String(date.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function montarPayloadRegistro(params: {
+  alunoId: number;
+  aulaId: number;
+  data?: string;
+  categoria: CategoriaRegistro;
+  detalhes: DetalheRapido[];
+  observacao: string;
+}): RegistroPayload {
+  const partes: string[] = [];
+  if (params.detalhes.length > 0) {
+    partes.push(params.detalhes.join(', '));
+  }
+  if (params.observacao.trim()) {
+    partes.push(params.observacao.trim());
+  }
+
+  const textoComposto = partes.length > 0 ? partes.join(' - ') : 'Registrado por áudio';
+  const textoLivre =
+    partes.length > 0 ? partes.join(' - ') : params.observacao.trim() || null;
+
+  const payload: RegistroPayload = {
+    alunoId: params.alunoId,
+    aulaId: params.aulaId,
+    data: params.data ?? formatarDataISO(),
+  };
+
+  switch (params.categoria) {
+    case 'participou':
+      payload.participacao = textoComposto;
+      break;
+    case 'realizou_atividade':
+      payload.realizouAtividade = textoComposto;
+      break;
+    case 'respondeu_comandos':
+      payload.seguiuComandos = textoComposto;
+      break;
+    case 'dificuldade':
+      payload.dificuldades = textoComposto;
+      break;
+    case 'conquista':
+      payload.observacoesLivres = `Conquista: ${textoComposto}`;
+      break;
+    case 'observacao_livre':
+      payload.observacoesLivres = textoLivre;
+      break;
+  }
+
+  return payload;
+}
 
 export function RegistroAudioScreen() {
   const router = useRouter();
-  const [segundos, setSegundos] = useState(42);
-  const [pausado, setPausado] = useState(false);
+
+  const [estadoGravacao, setEstadoGravacao] = useState<'parado' | 'gravando' | 'pausado' | 'finalizado'>('parado');
+  const [tempoGravacao, setTempoGravacao] = useState(0);
+  const [textoTranscrito, setTextoTranscrito] = useState('');
+
+  const [aulas, setAulas] = useState<AulaApi[]>([]);
+  const [aulaSelecionada, setAulaSelecionada] = useState<AulaApi | null>(null);
+  const [alunoIdManual, setAlunoIdManual] = useState('1');
+  const [aulaIdManual, setAulaIdManual] = useState('1');
+  const [carregandoDados, setCarregandoDados] = useState(true);
+  const [salvando, setSalvando] = useState(false);
+  const [modalAulaVisivel, setModalAulaVisivel] = useState(false);
+
+  const [categoria, setCategoria] = useState<CategoriaRegistro>('participou');
+  const [detalhesSelecionados, setDetalhesSelecionados] = useState<DetalheRapido[]>(['Espontaneamente']);
 
   useEffect(() => {
-    if (pausado) return;
-    const timer = setInterval(() => {
-      setSegundos(s => s + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [pausado]);
+    let ativo = true;
 
-  const formatarTempo = (totalSegs: number) => {
-    const mins = Math.floor(totalSegs / 60);
-    const segs = totalSegs % 60;
-    return `${String(mins).padStart(2, '0')}:${String(segs).padStart(2, '0')}`;
+    async function carregarAulas() {
+      try {
+        setCarregandoDados(true);
+        const [resAulas] = await Promise.allSettled([aulaService.listar()]);
+
+        if (!ativo) return;
+
+        const listaAulas = resAulas.status === 'fulfilled' ? resAulas.value : [];
+        setAulas(listaAulas);
+
+        const aulaInicial = listaAulas[0] ?? null;
+        setAulaSelecionada(aulaInicial);
+        if (aulaInicial?.id) {
+          setAulaIdManual(String(aulaInicial.id));
+        }
+      } finally {
+        if (ativo) setCarregandoDados(false);
+      }
+    }
+
+    carregarAulas();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (estadoGravacao === 'gravando') {
+      interval = setInterval(() => {
+        setTempoGravacao((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [estadoGravacao]);
+
+  const formatarTempo = (segundos: number) => {
+    const mins = Math.floor(segundos / 60);
+    const secs = segundos % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleIniciarGravacao = () => {
+    setEstadoGravacao('gravando');
+    setTempoGravacao(0);
+    setTextoTranscrito('');
+  };
+
+  const handlePausarRetomar = () => {
+    setEstadoGravacao((prev) => (prev === 'gravando' ? 'pausado' : 'gravando'));
+  };
+
+  const handleFinalizarGravacao = () => {
+    setEstadoGravacao('finalizado');
+    if (!textoTranscrito.trim()) {
+      setTextoTranscrito('Aluno participou da atividade oral em inglês com boa pronúncia.');
+    }
+  };
+
+  const toggleDetalhe = (detalhe: DetalheRapido) => {
+    if (detalhesSelecionados.includes(detalhe)) {
+      setDetalhesSelecionados(detalhesSelecionados.filter((d) => d !== detalhe));
+    } else {
+      setDetalhesSelecionados([...detalhesSelecionados, detalhe]);
+    }
+  };
+
+  const handleSalvar = async () => {
+    if (salvando) return;
+
+    const alunoIdFinal = Number(alunoIdManual);
+    const aulaIdFinal = aulaSelecionada?.id ?? Number(aulaIdManual);
+
+    if (
+      !Number.isInteger(alunoIdFinal) ||
+      alunoIdFinal <= 0 ||
+      !Number.isInteger(aulaIdFinal) ||
+      aulaIdFinal <= 0
+    ) {
+      Alert.alert('Atenção', 'Informe um ID válido para o aluno e para a aula antes de salvar.');
+      return;
+    }
+
+    try {
+      setSalvando(true);
+
+      const dataRegistro = aulaSelecionada?.data
+        ? aulaSelecionada.data.slice(0, 10)
+        : formatarDataISO();
+
+      const payload = montarPayloadRegistro({
+        alunoId: alunoIdFinal,
+        aulaId: aulaIdFinal,
+        data: dataRegistro,
+        categoria,
+        detalhes: detalhesSelecionados,
+        observacao: textoTranscrito,
+      });
+
+      await registroService.criar(payload);
+
+      Alert.alert('Sucesso', 'Registro por áudio salvo com sucesso!', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (error) {
+      const mensagem =
+        error instanceof ApiError
+          ? error.message
+          : 'Não foi possível salvar o registro. Tente novamente.';
+      Alert.alert('Erro ao salvar', mensagem);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>T</Text>
-          </View>
-          <Text style={styles.headerTitle}>Novo registro</Text>
-        </View>
-        <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={20} color="#334155" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color="#1E293B" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Registro por áudio</Text>
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.badgeTop}>REGISTRO POR ÁUDIO</Text>
-          <Text style={styles.mainHeading}>Sua observação, no seu tempo.</Text>
-          <Text style={styles.subHeading}>Grave agora. Revise antes de salvar.</Text>
-        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Contexto do registro</Text>
 
-        <View style={styles.cardAluno}>
-          <View>
-            <Text style={styles.labelRegistrando}>REGISTRANDO PARA</Text>
-            <View style={styles.alunoRow}>
-              <View style={styles.avatarMini}><Text style={styles.avatarMiniText}>MO</Text></View>
+          {carregandoDados ? (
+            <ActivityIndicator color="#2563EB" style={{ marginVertical: 12 }} />
+          ) : (
+            <>
               <View>
-                <Text style={styles.alunoNome}>Marina Oliveira</Text>
-                <Text style={styles.alunoTurma}>English Explorers · 5º A</Text>
+                <Text style={styles.fieldLabelSmall}>ID DO ALUNO</Text>
+                <TextInput
+                  style={styles.idInput}
+                  keyboardType="number-pad"
+                  placeholder="Ex: 1"
+                  placeholderTextColor="#94A3B8"
+                  value={alunoIdManual}
+                  onChangeText={setAlunoIdManual}
+                />
               </View>
-            </View>
-            <View style={styles.aulaEmAndamento}>
-              <Ionicons name="calendar-outline" size={14} color="#64748B" />
-              <Text style={styles.aulaTexto}>Hoje · Daily routines</Text>
-              <Text style={styles.aulaStatus}>Aula em andamento</Text>
-            </View>
-          </View>
-          <TouchableOpacity>
-            <Text style={styles.alterarText}>Alterar</Text>
-          </TouchableOpacity>
+
+              {aulas.length > 0 ? (
+                <TouchableOpacity
+                  style={[styles.dropdownField, { marginTop: 10 }]}
+                  onPress={() => setModalAulaVisivel(true)}
+                >
+                  <View>
+                    <Text style={styles.fieldLabelSmall}>AULA</Text>
+                    <Text style={styles.fieldValue}>
+                      {aulaSelecionada
+                        ? `${aulaSelecionada.nome}${aulaSelecionada.assunto ? ` · ${aulaSelecionada.assunto}` : ''}`
+                        : 'Selecionar aula'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={18} color="#64748B" />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.fieldLabelSmall}>ID DA AULA</Text>
+                  <TextInput
+                    style={styles.idInput}
+                    keyboardType="number-pad"
+                    placeholder="Ex: 1"
+                    placeholderTextColor="#94A3B8"
+                    value={aulaIdManual}
+                    onChangeText={setAulaIdManual}
+                  />
+                </View>
+              )}
+            </>
+          )}
         </View>
 
-        <View style={styles.cardGravacao}>
-          <View style={styles.gravandoBadge}>
-            <View style={styles.redDot} />
-            <Text style={styles.gravandoText}>Gravando agora</Text>
-          </View>
-
-          <Text style={styles.timerText}>{formatarTempo(segundos)}</Text>
-          <Text style={styles.timerSubText}>Sua observação está sendo capturada</Text>
-
-          <View style={styles.soundWaveContainer}>
-            {[12, 24, 18, 35, 42, 20, 30, 15, 25, 38, 45, 22, 16, 28, 34, 19, 12].map((height, i) => (
-              <View key={i} style={[styles.soundBar, { height }]} />
-            ))}
-          </View>
+        <View style={styles.recorderCard}>
+          <Text style={styles.timerText}>{formatarTempo(tempoGravacao)}</Text>
+          <Text style={styles.statusText}>
+            {estadoGravacao === 'parado' && 'Pronto para gravar'}
+            {estadoGravacao === 'gravando' && 'Gravando áudio...'}
+            {estadoGravacao === 'pausado' && 'Gravação pausada'}
+            {estadoGravacao === 'finalizado' && 'Gravação concluída'}
+          </Text>
 
           <View style={styles.controlsRow}>
-            <TouchableOpacity 
-              style={styles.controlButtonPausar}
-              onPress={() => setPausado(!pausado)}
-            >
-              <Ionicons name={pausado ? "play" : "pause"} size={16} color="#FFFFFF" />
-              <Text style={styles.controlButtonText}>{pausado ? "Retomar" : "Pausar"}</Text>
-            </TouchableOpacity>
+            {(estadoGravacao === 'parado' || estadoGravacao === 'finalizado') && (
+              <TouchableOpacity style={styles.recordButton} onPress={handleIniciarGravacao}>
+                <Ionicons name="mic" size={22} color="#FFFFFF" />
+                <Text style={styles.recordButtonText}>
+                  {estadoGravacao === 'finalizado' ? 'Gravar novamente' : 'Iniciar gravação'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
-              style={styles.controlButtonFinalizar}
-              onPress={() => alert("Áudio finalizado para transcrição!")}
-            >
-              <Ionicons name="stop" size={16} color="#0F172A" />
-              <Text style={styles.controlButtonFinalizarText}>Finalizar</Text>
-            </TouchableOpacity>
+            {(estadoGravacao === 'gravando' || estadoGravacao === 'pausado') && (
+              <>
+                <TouchableOpacity style={styles.secondaryButton} onPress={handlePausarRetomar}>
+                  <Ionicons
+                    name={estadoGravacao === 'gravando' ? 'pause' : 'play'}
+                    size={18}
+                    color="#1E293B"
+                  />
+                  <Text style={styles.secondaryButtonText}>
+                    {estadoGravacao === 'gravando' ? 'Pausar' : 'Retomar'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.finishButton} onPress={handleFinalizarGravacao}>
+                  <Ionicons name="stop" size={18} color="#FFFFFF" />
+                  <Text style={styles.finishButtonText}>Finalizar</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Transcrição / Observação</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="A transcrição ou observação aparecerá aqui para revisão..."
+            placeholderTextColor="#94A3B8"
+            multiline
+            numberOfLines={4}
+            value={textoTranscrito}
+            onChangeText={setTextoTranscrito}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Categoria e detalhes</Text>
+
+          <View style={styles.chipsContainer}>
+            {(
+              [
+                { id: 'participou', label: 'Participou' },
+                { id: 'realizou_atividade', label: 'Realizou atividade' },
+                { id: 'respondeu_comandos', label: 'Respondeu comandos' },
+                { id: 'dificuldade', label: 'Dificuldade' },
+                { id: 'conquista', label: 'Conquista' },
+                { id: 'observacao_livre', label: 'Observação livre' },
+              ] as { id: CategoriaRegistro; label: string }[]
+            ).map((item) => {
+              const active = categoria === item.id;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setCategoria(item.id)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          <TouchableOpacity style={styles.cancelarGravacaoButton} onPress={() => router.back()}>
-            <Text style={styles.cancelarGravacaoText}>Cancelar gravação</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.tipCard}>
-          <Ionicons name="information-circle-outline" size={18} color="#2563EB" style={{ marginTop: 2 }} />
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={styles.tipTitle}>Sua voz vira texto. Você dá a palavra final.</Text>
-            <Text style={styles.tipDesc}>Ao finalizar, revise a transcrição antes de salvar. Nenhum registro é criado durante a gravação.</Text>
+          <View style={[styles.chipsContainer, { marginTop: 8 }]}>
+            {(['Espontaneamente', 'Com apoio', 'Em dupla', 'Grupo todo'] as DetalheRapido[]).map((detalhe) => {
+              const active = detalhesSelecionados.includes(detalhe);
+              return (
+                <TouchableOpacity
+                  key={detalhe}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => toggleDetalhe(detalhe)}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{detalhe}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        <View style={styles.cardInstrucoes}>
-          <Text style={styles.instrucoesTitulo}>Conte o que você observou</Text>
-          <Text style={styles.instrucoesDesc}>Fale o nome da aluna, a atividade e o que aconteceu. Um trecho curto é suficiente.</Text>
-          
-          <TouchableOpacity 
-            style={styles.manualButton}
-            onPress={() => router.back()}
-          >
-            <Feather name="edit-3" size={16} color="#2563EB" />
-            <Text style={styles.manualButtonText}>Usar registro manual</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.saveButton, (salvando || carregandoDados) && { opacity: 0.7 }]}
+          onPress={handleSalvar}
+          disabled={salvando || carregandoDados}
+        >
+          {salvando ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Salvar registro</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={modalAulaVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalAulaVisivel(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalAulaVisivel(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione a aula</Text>
+            <ScrollView style={{ maxHeight: 280 }}>
+              {aulas.map((aula) => (
+                <TouchableOpacity
+                  key={aula.id}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setAulaSelecionada(aula);
+                    setAulaIdManual(String(aula.id));
+                    setModalAulaVisivel(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>
+                    {aula.nome}
+                    {aula.assunto ? ` · ${aula.assunto}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -137,48 +426,36 @@ export function RegistroAudioScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoBadge: { width: 32, height: 32, backgroundColor: '#2563EB', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  logoText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+  backButton: { padding: 4 },
   headerTitle: { fontSize: 16, fontWeight: '600', color: '#1E293B' },
-  closeButton: { padding: 8 },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  sectionHeader: { marginBottom: 14 },
-  badgeTop: { fontSize: 10, fontWeight: 'bold', color: '#2563EB', letterSpacing: 0.5, marginBottom: 4 },
-  mainHeading: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  subHeading: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  cardAluno: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  labelRegistrando: { fontSize: 10, color: '#64748B', fontWeight: '600', marginBottom: 6 },
-  alunoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  avatarMini: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#DCFCE7', justifyContent: 'center', alignItems: 'center' },
-  avatarMiniText: { fontSize: 11, fontWeight: 'bold', color: '#15803D' },
-  alunoNome: { fontSize: 13, fontWeight: 'bold', color: '#0F172A' },
-  alunoTurma: { fontSize: 11, color: '#64748B' },
-  aulaEmAndamento: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  aulaTexto: { fontSize: 11, color: '#475569' },
-  aulaStatus: { fontSize: 10, color: '#059669', backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden', fontWeight: '500' },
-  alterarText: { fontSize: 12, color: '#2563EB', fontWeight: '600' },
-  cardGravacao: { backgroundColor: '#0F172A', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 14 },
-  gravandoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 12 },
-  redDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-  gravandoText: { color: '#E2E8F0', fontSize: 11, fontWeight: '500' },
-  timerText: { fontSize: 40, fontWeight: 'bold', color: '#FFFFFF', letterSpacing: 1, marginBottom: 4 },
-  timerSubText: { fontSize: 12, color: '#94A3B8', marginBottom: 20 },
-  soundWaveContainer: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 50, marginBottom: 24 },
-  soundBar: { width: 3, backgroundColor: '#60A5FA', borderRadius: 2 },
-  controlsRow: { flexDirection: 'row', gap: 10, width: '100%', marginBottom: 16 },
-  controlButtonPausar: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155', paddingVertical: 10, borderRadius: 8 },
-  controlButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  controlButtonFinalizar: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', paddingVertical: 10, borderRadius: 8 },
-  controlButtonFinalizarText: { color: '#0F172A', fontSize: 13, fontWeight: '600' },
-  cancelarGravacaoButton: { padding: 4 },
-  cancelarGravacaoText: { color: '#94A3B8', fontSize: 12, textDecorationLine: 'underline' },
-  tipCard: { flexDirection: 'row', backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 10, padding: 12, marginBottom: 14 },
-  tipTitle: { fontSize: 12, fontWeight: 'bold', color: '#1E3A8A' },
-  tipDesc: { fontSize: 11, color: '#3B82F6', marginTop: 2 },
-  cardInstrucoes: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 14, alignItems: 'center' },
-  instrucoesTitulo: { fontSize: 13, fontWeight: 'bold', color: '#0F172A', marginBottom: 4 },
-  instrucoesDesc: { fontSize: 11, color: '#64748B', textAlign: 'center', marginBottom: 12 },
-  manualButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#BFDBFE', backgroundColor: '#EFF6FF', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8 },
-  manualButtonText: { color: '#2563EB', fontSize: 12, fontWeight: '600' }
+  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' },
+  cardTitle: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 10 },
+  fieldLabelSmall: { fontSize: 10, color: '#64748B', fontWeight: '500', marginBottom: 4 },
+  fieldValue: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
+  idInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A' },
+  dropdownField: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10 },
+  recorderCard: { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 12, padding: 18, marginBottom: 14, alignItems: 'center' },
+  timerText: { fontSize: 28, fontWeight: 'bold', color: '#1E3A8A' },
+  statusText: { fontSize: 13, color: '#3B82F6', marginTop: 4, marginBottom: 14 },
+  controlsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  recordButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#2563EB', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+  recordButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  secondaryButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
+  secondaryButtonText: { color: '#1E293B', fontSize: 13, fontWeight: '600' },
+  finishButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#DC2626', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10 },
+  finishButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  textArea: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A', textAlignVertical: 'top', minHeight: 90 },
+  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
+  chipActive: { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
+  chipText: { fontSize: 12, color: '#475569' },
+  chipTextActive: { color: '#1D4ED8', fontWeight: '600' },
+  saveButton: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
+  saveButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', padding: 24 },
+  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16 },
+  modalTitle: { fontSize: 15, fontWeight: 'bold', color: '#0F172A', marginBottom: 12 },
+  modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  modalOptionText: { fontSize: 14, color: '#1E293B' },
 });
