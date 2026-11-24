@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Alert,
@@ -22,9 +21,16 @@ export function TurmaDetailsScreen() {
 
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { getTurmaById, deleteTurma } = useTurmasContext();
+  const {
+    getTurmaById,
+    deleteTurma,
+    updateTurmaStatus,
+  } = useTurmasContext();
+
   const { lessons, selectLesson } = useAulasContext();
+
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const turma = getTurmaById(id);
 
@@ -48,10 +54,42 @@ export function TurmaDetailsScreen() {
   }
 
   const isAtiva = turma.status === "ativa";
+
   const aulasDaTurma = lessons.filter(
     (lesson) =>
       lesson.turmaId === turma.id || lesson.classGroup === turma.nome
   );
+
+  async function handleToggleStatus() {
+    if (!turma || isUpdatingStatus) return;
+
+    try {
+      setIsUpdatingStatus(true);
+
+      await updateTurmaStatus(
+        turma.id,
+        isAtiva ? "arquivada" : "ativa"
+      );
+
+      if (Platform.OS !== "web") {
+        Alert.alert(
+          "Sucesso",
+          isAtiva
+            ? "Turma arquivada com sucesso!"
+            : "Turma reativada com sucesso!"
+        );
+      }
+    } catch (erro) {
+      const mensagem =
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível atualizar o status da turma.";
+
+      Alert.alert("Erro", mensagem);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
 
   async function confirmDelete() {
     if (!turma || isDeleting) return;
@@ -66,6 +104,7 @@ export function TurmaDetailsScreen() {
           erro instanceof Error
             ? erro.message
             : "Não foi possível excluir a turma.";
+
         Alert.alert("Erro ao excluir", mensagem);
       } finally {
         setIsDeleting(false);
@@ -187,6 +226,7 @@ export function TurmaDetailsScreen() {
                   <Text style={styles.aulaTitle} numberOfLines={1}>
                     {aula.title}
                   </Text>
+
                   <Text style={styles.infoLabel} numberOfLines={1}>
                     {aula.dateLabel} · {aula.startTime}
                   </Text>
@@ -211,12 +251,26 @@ export function TurmaDetailsScreen() {
 
       <View style={styles.actions}>
         <Button
+          title={
+            isUpdatingStatus
+              ? "Atualizando..."
+              : isAtiva
+                ? "Arquivar turma"
+                : "Reativar turma"
+          }
+          variant="secondary"
+          disabled={isUpdatingStatus}
+          onPress={() => void handleToggleStatus()}
+        />
+
+        <Button
           title="Editar turma"
           variant="secondary"
           onPress={() =>
             router.push(`/turmas/editar/${turma.id}` as Href)
           }
         />
+
         <Button
           title="Ver relatório semanal"
           variant="secondary"
@@ -224,6 +278,7 @@ export function TurmaDetailsScreen() {
             router.push(`/relatorios?turmaId=${turma.id}` as Href)
           }
         />
+
         <Button
           title={isDeleting ? "Excluindo..." : "Excluir turma"}
           variant="ghost"
