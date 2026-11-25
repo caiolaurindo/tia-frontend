@@ -112,7 +112,14 @@ export function TurmaDetailsScreen() {
     };
 
     if (Platform.OS === "web") {
-      await executarExclusao();
+      const confirmar = window.confirm(
+        `Deseja realmente excluir a turma "${turma.nome}"?`
+      );
+
+      if (confirmar) {
+        await executarExclusao();
+      }
+
       return;
     }
 

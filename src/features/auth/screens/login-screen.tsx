@@ -30,13 +30,13 @@ export function LoginScreen({ initialMode = "login" }: LoginScreenProps) {
   const loginForm = useLoginForm({
     initialMode,
     onLoginSuccess: () => {
-      router.replace("/aulas");
+      router.replace("/home");
     },
   });
 
   const registerForm = useRegisterForm({
     onRegisterSuccess: () => {
-      router.replace("/aulas");
+      router.replace("/home");
     },
   });
 

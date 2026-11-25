@@ -47,9 +47,9 @@ function mapearTurma(turmaApi: TurmaApi): Turma {
     anoLetivo: Number(
       turmaApi.anoLetivo ?? new Date().getFullYear()
     ),
-    faixaEtaria: "",
-    turno: "",
-    descricao: "",
+    faixaEtaria: turmaApi.faixaEtaria ?? "",
+    turno: turmaApi.turno ?? "",
+    descricao: turmaApi.descricao ?? "",
     status: turmaApi.arquivada ? "arquivada" : "ativa",
   };
 }
@@ -105,14 +105,12 @@ export function TurmasProvider({
         nome: input.nome,
         serie: input.serie,
         anoLetivo: input.anoLetivo,
-      });
-
-      const novaTurma: Turma = {
-        ...mapearTurma(resposta),
         faixaEtaria: input.faixaEtaria,
         turno: input.turno,
         descricao: input.descricao ?? "",
-      };
+      });
+
+      const novaTurma = mapearTurma(resposta);
 
       setTurmas((current) => [novaTurma, ...current]);
     },
@@ -125,14 +123,12 @@ export function TurmasProvider({
         nome: input.nome,
         serie: input.serie,
         anoLetivo: input.anoLetivo,
-      });
-
-      const turmaAtualizada: Turma = {
-        ...mapearTurma(resposta),
         faixaEtaria: input.faixaEtaria,
         turno: input.turno,
         descricao: input.descricao ?? "",
-      };
+      });
+
+      const turmaAtualizada = mapearTurma(resposta);
 
       setTurmas((current) =>
         current.map((turma) =>

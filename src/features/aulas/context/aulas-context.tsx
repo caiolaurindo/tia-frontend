@@ -146,8 +146,11 @@ export function AulasProvider({ children }: { children: React.ReactNode }) {
 
   const getLessonById = useCallback(
     (lessonId?: string): LessonItem | undefined => {
-      const targetId = lessonId || selectedLessonId;
-      return lessons.find((item) => item.id === targetId) ?? lessons[0];
+      const targetId = lessonId ?? selectedLessonId;
+
+      if (!targetId) return undefined;
+
+      return lessons.find((item) => item.id === targetId);
     },
     [lessons, selectedLessonId]
   );
