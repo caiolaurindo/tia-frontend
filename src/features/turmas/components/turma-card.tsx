@@ -9,10 +9,17 @@ import { Turma } from "../types/turmas.types";
 
 interface TurmaCardProps {
   turma: Turma;
+  quantidadeAlunos: number;
+  quantidadeAulas: number;
   onPress: () => void;
 }
 
-export function TurmaCard({ turma, onPress }: TurmaCardProps) {
+export function TurmaCard({
+  turma,
+  quantidadeAlunos,
+  quantidadeAulas,
+  onPress,
+}: TurmaCardProps) {
   return (
     <Pressable onPress={onPress}>
       <Card style={styles.card}>
@@ -30,10 +37,20 @@ export function TurmaCard({ turma, onPress }: TurmaCardProps) {
           />
         </View>
 
-        <View style={styles.details}>
-          <Text style={styles.detail}>
-            Turno: {turma.turno}
+        <View style={styles.stats}>
+          <Text style={styles.stat}>
+            {quantidadeAlunos}{" "}
+            {quantidadeAlunos === 1 ? "aluno" : "alunos"}
           </Text>
+
+          <Text style={styles.stat}>
+            {quantidadeAulas}{" "}
+            {quantidadeAulas === 1 ? "aula" : "aulas"}
+          </Text>
+        </View>
+
+        <View style={styles.details}>
+          <Text style={styles.detail}>Turno: {turma.turno}</Text>
 
           <Text style={styles.detail}>
             Faixa etária: {turma.faixaEtaria}
@@ -70,6 +87,16 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     color: colors.text.secondary,
+  },
+  stats: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+  },
+  stat: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.brand.primary,
   },
   details: {
     gap: spacing.xs,

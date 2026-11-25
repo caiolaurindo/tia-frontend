@@ -13,6 +13,7 @@ import { AppShell } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
 import { useAulasContext } from "@/features/aulas/context/aulas-context";
 import { colors, radii, spacing } from "@/theme";
+import { useAlunosContext } from "@/features/alunos/context/alunos-context";
 
 import { useTurmasContext } from "../context/turmas-context";
 
@@ -28,6 +29,7 @@ export function TurmaDetailsScreen() {
   } = useTurmasContext();
 
   const { lessons, selectLesson } = useAulasContext();
+  const { alunos } = useAlunosContext();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -58,6 +60,10 @@ export function TurmaDetailsScreen() {
   const aulasDaTurma = lessons.filter(
     (lesson) =>
       lesson.turmaId === turma.id || lesson.classGroup === turma.nome
+  );
+
+  const alunosDaTurma = alunos.filter(
+    (aluno) => aluno.turmaId === String(turma.id)
   );
 
   async function handleToggleStatus() {
@@ -255,6 +261,58 @@ export function TurmaDetailsScreen() {
           }
         />
       </Card>
+      
+            <Card style={styles.card}>
+        <View style={styles.statusRow}>
+          <Text style={styles.sectionTitle}>
+            Alunos da turma ({alunosDaTurma.length})
+          </Text>
+
+          <Pressable onPress={() => router.push("/alunos")}>
+            <Text style={styles.linkText}>Ver todos</Text>
+          </Pressable>
+        </View>
+
+        {alunosDaTurma.length === 0 ? (
+          <Text style={styles.infoLabel}>
+            Nenhum aluno cadastrado nesta turma ainda.
+          </Text>
+        ) : (
+          <View style={styles.alunosList}>
+            {alunosDaTurma.map((aluno) => (
+              <Pressable
+                key={aluno.id}
+                onPress={() => router.push(`/alunos/${aluno.id}` as Href)}
+                style={styles.alunoRow}
+              >
+                <View style={styles.alunoInfo}>
+                  <Text style={styles.alunoName}>{aluno.name}</Text>
+                  <Text style={styles.infoLabel}>
+                    {aluno.age} anos · {aluno.grade}
+                  </Text>
+                </View>
+
+                <Badge
+                  label={
+                    aluno.status === "destaque"
+                      ? "Destaque"
+                      : aluno.status === "atencao"
+                        ? "Atenção"
+                        : "No ritmo"
+                  }
+                  variant={
+                    aluno.status === "destaque"
+                      ? "green"
+                      : aluno.status === "atencao"
+                        ? "amber"
+                        : "blue"
+                  }
+                />
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </Card>
 
       <View style={styles.actions}>
         <Button
@@ -386,6 +444,30 @@ const styles = StyleSheet.create({
   },
 
   aulaTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text.primary,
+  },
+    alunosList: {
+    gap: spacing.sm,
+  },
+
+  alunoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.xl,
+    backgroundColor: colors.background.primary,
+  },
+
+  alunoInfo: {
+    flex: 1,
+    gap: 2,
+  },
+
+  alunoName: {
     fontSize: 14,
     fontWeight: "700",
     color: colors.text.primary,
