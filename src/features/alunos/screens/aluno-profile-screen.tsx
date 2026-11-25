@@ -7,6 +7,7 @@ import { colors, radii, spacing } from "@/theme";
 import { AlunoFormModal } from "../components/aluno-form-modal";
 import { useAlunosContext } from "../context/alunos-context";
 import { AlunoEventType, AlunoProfileTab } from "../types/alunos.types";
+import { useAlunoConquistas } from "../hooks/use-aluno-conquistas";
 
 const PROFILE_TABS: { key: AlunoProfileTab; label: string }[] = [
   { key: "visao_geral", label: "Visão geral" },
@@ -40,7 +41,16 @@ export function AlunoProfileScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { getAlunoById, updateAluno } = useAlunosContext();
 
-  const aluno = getAlunoById(id);
+  const alunoBase = getAlunoById(id);
+  const { events, skills, achievementsCount } = useAlunoConquistas(alunoBase?.id);
+  const aluno = useMemo(
+    () =>
+      alunoBase
+        ? { ...alunoBase, events, skills, achievementsCount }
+        : undefined,
+    [alunoBase, events, skills, achievementsCount]
+  );
+
   const [activeTab, setActiveTab] = useState<AlunoProfileTab>("visao_geral");
   const [historyFilter, setHistoryFilter] = useState<"todos" | AlunoEventType>(
     "todos"
@@ -54,6 +64,7 @@ export function AlunoProfileScreen() {
   }, [aluno, historyFilter]);
 
   if (!aluno) {
+    // ...resto igual
     return (
       <AppShell
         title="Perfil do aluno"

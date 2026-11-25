@@ -174,10 +174,10 @@ export function AlunosListScreen() {
       <AlunoFormModal
         visible={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onSave={(input) => {
-          const created = createAluno(input);
-          router.push(`/alunos/${created.id}` as Href);
-        }}
+        onSave={async (input) => {
+  const created = await createAluno(input);
+  router.push(`/alunos/${created.id}` as Href);
+    }}
       />
     </AppShell>
   );
