@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import {
+  Conquista,
   ConquistaCategoria,
   NovaConquistaInput,
   Turma,
@@ -16,6 +17,9 @@ export function useNovaConquistaForm(
   const [escolhidas, setEscolhidas] = useState<string[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
+  // Edição: turmas que a conquista já tem (ficam marcadas e não podem ser desmarcadas aqui)
+  const [modoEdicao, setModoEdicao] = useState(false);
+  const [vinculadas, setVinculadas] = useState<string[]>([]);
 
   const turmaIds = useMemo(
     () => escolhidas ?? turmas.map((t) => t.id),
@@ -24,23 +28,40 @@ export function useNovaConquistaForm(
 
   const alternarTurma = useCallback(
     (id: string) => {
+      if (vinculadas.includes(id)) return;
       const base = escolhidas ?? turmas.map((t) => t.id);
       setEscolhidas(
         base.includes(id) ? base.filter((t) => t !== id) : [...base, id],
       );
     },
-    [escolhidas, turmas],
+    [escolhidas, turmas, vinculadas],
   );
 
-  // exige ao menos uma turma, senão a conquista nasceria sem aparecer em nenhuma
+  // Ao criar, exige ao menos uma turma (senão a conquista não apareceria em nenhuma).
+  // Ao editar, dá para salvar sem mexer nas turmas.
   const valido =
-    nome.trim().length >= 2 && (turmas.length === 0 || turmaIds.length > 0);
+    nome.trim().length >= 2 &&
+    (modoEdicao || turmas.length === 0 || turmaIds.length > 0);
 
   const reset = useCallback(() => {
     setNome("");
     setCategoria("speaking");
     setNivel("");
     setEscolhidas(null);
+    setErro(null);
+    setSalvando(false);
+    setModoEdicao(false);
+    setVinculadas([]);
+  }, []);
+
+  const preencher = useCallback((conquista: Conquista) => {
+    const ids = Object.keys(conquista.progressoPorTurma);
+    setNome(conquista.nome);
+    setCategoria(conquista.categoria);
+    setNivel(conquista.nivel ?? "");
+    setEscolhidas(ids);
+    setVinculadas(ids);
+    setModoEdicao(true);
     setErro(null);
     setSalvando(false);
   }, []);
@@ -73,11 +94,14 @@ export function useNovaConquistaForm(
     nivel,
     setNivel,
     turmaIds,
+    vinculadas,
+    modoEdicao,
     alternarTurma,
     valido,
     erro,
     salvando,
     submit,
     reset,
+    preencher,
   };
 }

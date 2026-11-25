@@ -14,26 +14,31 @@ import { colors, spacing } from "@/theme";
 import { useConquistasContext } from "../context/conquistas-context";
 import { CATEGORIAS, CATEGORIA_LABEL } from "../data/conquistas-options";
 import { useNovaConquistaForm } from "../hooks/use-nova-conquista-form";
-import { NovaConquistaInput } from "../types/conquistas.types";
+import { Conquista, NovaConquistaInput } from "../types/conquistas.types";
 import { ConquistaChip } from "./conquista-chip";
 
 export interface NovaConquistaSheetProps {
   visible: boolean;
   onClose: () => void;
   onSave: (input: NovaConquistaInput) => void | Promise<void>;
+  /** Quando informada, o formulário abre em modo edição, já preenchido. */
+  conquista?: Conquista | null;
 }
 
 export function NovaConquistaSheet({
   visible,
   onClose,
   onSave,
+  conquista = null,
 }: NovaConquistaSheetProps) {
   const insets = useSafeAreaInsets();
   const { turmas } = useConquistasContext();
   const form = useNovaConquistaForm(onSave, turmas);
+  const editando = conquista !== null;
 
   useEffect(() => {
     if (!visible) form.reset();
+    else if (conquista) form.preencher(conquista);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -60,7 +65,7 @@ export function NovaConquistaSheet({
         >
           <View style={styles.grab} />
           <Text style={styles.title} accessibilityRole="header">
-            Nova conquista
+            {editando ? "Editar conquista" : "Nova conquista"}
           </Text>
 
           <View style={styles.field}>
@@ -71,7 +76,7 @@ export function NovaConquistaSheet({
               placeholder="Ex.: Pedir ajuda em inglês"
               placeholderTextColor={colors.text.placeholder}
               maxLength={150}
-              autoFocus
+              autoFocus={!editando}
               style={styles.input}
             />
           </View>
@@ -124,7 +129,13 @@ export function NovaConquistaSheet({
                     />
                   ))}
                 </View>
-                {form.turmaIds.length === 0 ? (
+                {form.vinculadas.length > 0 ? (
+                  <Text style={styles.hint}>
+                    As turmas já vinculadas continuam marcadas. Toque em outra
+                    turma para vincular também.
+                  </Text>
+                ) : null}
+                {!form.modoEdicao && form.turmaIds.length === 0 ? (
                   <Text style={styles.hint}>
                     Selecione ao menos uma turma.
                   </Text>
@@ -150,7 +161,11 @@ export function NovaConquistaSheet({
             ]}
           >
             <Text style={styles.saveText}>
-              {form.salvando ? "Salvando..." : "Salvar conquista"}
+              {form.salvando
+                ? "Salvando..."
+                : editando
+                  ? "Salvar alterações"
+                  : "Salvar conquista"}
             </Text>
           </Pressable>
         </View>
