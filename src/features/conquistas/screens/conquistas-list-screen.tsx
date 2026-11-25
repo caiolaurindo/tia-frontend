@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, AlertButton, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { spacing } from "@/theme";
@@ -8,6 +8,7 @@ import { ConquistasEmptyState } from "../components/conquistas-empty-state";
 import { ConquistasFilters } from "../components/conquistas-filters";
 import { ConquistasLegend } from "../components/conquistas-legend";
 import { ConquistasPageHeader } from "../components/conquistas-page-header";
+import { ConquistasSectionHeader } from "../components/conquistas-section-header";
 import { ConquistasToast } from "../components/conquistas-toast";
 import { NovaConquistaSheet } from "../components/nova-conquista-sheet";
 import {
@@ -26,8 +27,12 @@ interface ToastState {
 
 export function ConquistasListScreen() {
   const router = useRouter();
-  const { adicionarConquista, arquivarConquista, restaurarConquista } =
-    useConquistasContext();
+  const {
+    adicionarConquista,
+    editarConquista,
+    arquivarConquista,
+    restaurarConquista,
+  } = useConquistasContext();
   const {
     turma,
     setTurma,
@@ -37,37 +42,49 @@ export function ConquistasListScreen() {
     setBusca,
     categoria,
     setCategoria,
+    mostrarArquivadas,
+    setMostrarArquivadas,
     visiveis,
-    sugestoes,
+    totalAtivas,
+    totalArquivadas,
     semConquistas,
+    semArquivadas,
     semResultados,
   } = useConquistas();
 
   const [sheetAberto, setSheetAberto] = useState(false);
+  // null = formulário de nova conquista; preenchida = edição dessa conquista
+  const [conquistaEmEdicao, setConquistaEmEdicao] = useState<Conquista | null>(
+    null,
+  );
   const [toast, setToast] = useState<ToastState | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
+  const abrirNova = () => {
+    setConquistaEmEdicao(null);
+    setSheetAberto(true);
+  };
+
+  const abrirEdicao = (conquista: Conquista) => {
+    setConquistaEmEdicao(conquista);
+    setSheetAberto(true);
+  };
+
   const handleSalvar = async (input: NovaConquistaInput) => {
     try {
-      await adicionarConquista(input);
-      setToast({ message: "Conquista salva" });
+      if (conquistaEmEdicao) {
+        await editarConquista(conquistaEmEdicao.id, input);
+        setToast({ message: "Conquista atualizada" });
+      } else {
+        await adicionarConquista(input);
+        setToast({ message: "Conquista salva" });
+      }
     } catch (e) {
       // erro comum (ex.: nome duplicado): o formulário mostra a mensagem
       if (!(e instanceof VinculoParcialError)) throw e;
       setToast({ message: e.message });
     }
     setSheetAberto(false);
-  };
-
-  const handleSugestao = async (input: NovaConquistaInput) => {
-    try {
-      await adicionarConquista(input);
-      setToast({ message: "Conquista salva" });
-    } catch (e) {
-      setToast({
-        message: e instanceof Error ? e.message : "Não foi possível salvar",
-      });
-    }
   };
 
   const handleArquivar = async (conquista: Conquista) => {
@@ -83,16 +100,37 @@ export function ConquistasListScreen() {
     }
   };
 
+  const handleRestaurar = async (conquista: Conquista) => {
+    try {
+      await restaurarConquista(conquista.id);
+      setToast({ message: "Conquista restaurada" });
+    } catch (e) {
+      setToast({ message: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
   const handleMais = (conquista: Conquista) => {
+    const botoes: AlertButton[] = conquista.ativa
+      ? [
+          { text: "Editar conquista", onPress: () => abrirEdicao(conquista) },
+          {
+            text: "Arquivar conquista",
+            style: "destructive",
+            onPress: () => handleArquivar(conquista),
+          },
+        ]
+      : [
+          {
+            text: "Restaurar conquista",
+            onPress: () => handleRestaurar(conquista),
+          },
+        ];
+
     Alert.alert(conquista.nome, undefined, [
-      {
-        text: "Arquivar conquista",
-        style: "destructive",
-        onPress: () => handleArquivar(conquista),
-      },
+      ...botoes,
       { text: "Cancelar", style: "cancel" },
     ]);
-  };
+};
 
   const handleAbrir = (conquista: Conquista) => {
     // TODO: quando a tela de Registro (outro módulo) estiver pronta, navegar
@@ -106,13 +144,19 @@ export function ConquistasListScreen() {
     });
   };
 
+  const tituloSecao = mostrarArquivadas
+    ? "Conquistas arquivadas"
+    : turma === TURMA_TODAS
+      ? "Todas as conquistas"
+      : `Conquistas · ${turmaNome}`;
+
   return (
     <AppShell
       title="Conquistas"
       activeTab="conquistas"
       onBackPress={() => router.back()}
     >
-      <ConquistasPageHeader onNewPress={() => setSheetAberto(true)} />
+      <ConquistasPageHeader onNewPress={abrirNova} />
 
       <ConquistasFilters
         turmaOptions={turmaOptions}
@@ -122,9 +166,11 @@ export function ConquistasListScreen() {
         onBuscaChange={setBusca}
         categoria={categoria}
         onCategoriaChange={setCategoria}
+        mostrarArquivadas={mostrarArquivadas}
+        onMostrarArquivadasChange={setMostrarArquivadas}
+        totalAtivas={totalAtivas}
+        totalArquivadas={totalArquivadas}
       />
-
-      <ConquistasLegend />
 
       {toast ? (
         <ConquistasToast
@@ -136,24 +182,26 @@ export function ConquistasListScreen() {
       ) : null}
 
       {semConquistas ? (
-        <ConquistasEmptyState
-          variant="sem-conquistas"
-          sugestoes={sugestoes}
-          onSugestaoPress={handleSugestao}
-        />
+        <ConquistasEmptyState variant="sem-conquistas" />
+      ) : semArquivadas ? (
+        <ConquistasEmptyState variant="sem-arquivadas" />
       ) : semResultados ? (
         <ConquistasEmptyState variant="sem-resultados" />
       ) : (
-        <View style={styles.list}>
-          {visiveis.map((conquista) => (
-            <ConquistaCard
-              key={conquista.id}
-              conquista={conquista}
-              turma={turma}
-              onPress={handleAbrir}
-              onMorePress={handleMais}
-            />
-          ))}
+        <View style={styles.section}>
+          <ConquistasSectionHeader title={tituloSecao} count={visiveis.length} />
+          <ConquistasLegend />
+          <View style={styles.list}>
+            {visiveis.map((conquista) => (
+              <ConquistaCard
+                key={conquista.id}
+                conquista={conquista}
+                turma={turma}
+                onPress={handleAbrir}
+                onMorePress={handleMais}
+              />
+            ))}
+          </View>
         </View>
       )}
 
@@ -161,11 +209,13 @@ export function ConquistasListScreen() {
         visible={sheetAberto}
         onClose={() => setSheetAberto(false)}
         onSave={handleSalvar}
+        conquista={conquistaEmEdicao}
       />
     </AppShell>
   );
 }
 
 const styles = StyleSheet.create({
+  section: { gap: spacing.md },
   list: { gap: spacing.md },
 });

@@ -9,7 +9,11 @@ import React, {
 import { useAuth } from "@/contexts";
 // Import direto do arquivo para não reabrir o ciclo entre contextos.
 import { useTurmasContext } from "@/features/turmas/context/turmas-context";
-import { conquistaService, ProgressoConquistaApi } from "@/services";
+import {
+  AtualizarConquistaInput,
+  conquistaService,
+  ProgressoConquistaApi,
+} from "@/services";
 import {
   Conquista,
   NovaConquistaInput,
@@ -17,6 +21,7 @@ import {
   Turma,
 } from "../types/conquistas.types";
 
+/** A conquista foi salva, mas o vínculo com alguma turma falhou. */
 export class VinculoParcialError extends Error {}
 
 interface ConquistasContextValue {
@@ -27,6 +32,8 @@ interface ConquistasContextValue {
   recarregar: () => Promise<void>;
   /** Sem turmaIds, vincula a todas as turmas ativas. */
   adicionarConquista: (input: NovaConquistaInput) => Promise<Conquista>;
+  /** Atualiza os dados e vincula a novas turmas (não remove vínculos). */
+  editarConquista: (id: string, input: NovaConquistaInput) => Promise<void>;
   arquivarConquista: (id: string) => Promise<void>;
   restaurarConquista: (id: string) => Promise<void>;
 }
@@ -110,6 +117,12 @@ export function ConquistasProvider({
     }
   }, [isAuthenticated, recarregar]);
 
+  const nomesDasTurmas = useCallback(
+    (ids: string[]) =>
+      ids.map((id) => turmas.find((t) => t.id === id)?.nome ?? id).join(", "),
+    [turmas],
+  );
+
   const adicionarConquista = useCallback(
     async (input: NovaConquistaInput) => {
       const { turmaIds, ...dados } = input;
@@ -125,17 +138,49 @@ export function ConquistasProvider({
       await recarregar();
 
       if (falhas.length > 0) {
-        const nomes = falhas
-          .map((id) => turmas.find((t) => t.id === id)?.nome ?? id)
-          .join(", ");
         throw new VinculoParcialError(
-          `Conquista salva, mas não foi possível vincular a: ${nomes}.`,
+          `Conquista salva, mas não foi possível vincular a: ${nomesDasTurmas(falhas)}.`,
         );
       }
 
       return criada;
     },
-    [turmas, recarregar],
+    [turmas, recarregar, nomesDasTurmas],
+  );
+
+  const editarConquista = useCallback(
+    async (id: string, input: NovaConquistaInput) => {
+      const atual = conquistas.find((c) => c.id === id);
+      if (!atual) return;
+
+      const { turmaIds = [], ...dados } = input;
+
+      // Só envia o que mudou. Erros aqui (ex.: nome duplicado) sobem para o formulário.
+      const mudancas: AtualizarConquistaInput = {};
+      if (dados.nome !== atual.nome) mudancas.nome = dados.nome;
+      if (dados.categoria !== atual.categoria) mudancas.categoria = dados.categoria;
+      if ((dados.nivel ?? "") !== (atual.nivel ?? "")) mudancas.nivel = dados.nivel ?? "";
+      if (Object.keys(mudancas).length > 0) {
+        await conquistaService.atualizar(id, mudancas);
+      }
+
+      // Vincula só as turmas novas; os vínculos existentes não são mexidos.
+      const jaVinculadas = Object.keys(atual.progressoPorTurma);
+      const novas = turmaIds.filter((t) => !jaVinculadas.includes(t));
+      const resultados = await Promise.allSettled(
+        novas.map((turmaId) => conquistaService.vincularTurma(turmaId, id)),
+      );
+      const falhas = novas.filter((_, i) => resultados[i].status === "rejected");
+
+      await recarregar();
+
+      if (falhas.length > 0) {
+        throw new VinculoParcialError(
+          `Conquista atualizada, mas não foi possível vincular a: ${nomesDasTurmas(falhas)}.`,
+        );
+      }
+    },
+    [conquistas, recarregar, nomesDasTurmas],
   );
 
   const definirAtiva = useCallback(async (id: string, ativa: boolean) => {
@@ -162,6 +207,7 @@ export function ConquistasProvider({
       error,
       recarregar,
       adicionarConquista,
+      editarConquista,
       arquivarConquista,
       restaurarConquista,
     }),
@@ -172,6 +218,7 @@ export function ConquistasProvider({
       error,
       recarregar,
       adicionarConquista,
+      editarConquista,
       arquivarConquista,
       restaurarConquista,
     ],

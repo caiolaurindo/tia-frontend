@@ -10,7 +10,7 @@ export interface ConquistasPageHeaderProps {
 export function ConquistasPageHeader({ onNewPress }: ConquistasPageHeaderProps) {
   return (
     <View style={styles.container}>
-      <View style={styles.texts}>
+      <View>
         <Text style={styles.title} accessibilityRole="header">
           Conquistas
         </Text>
@@ -26,20 +26,14 @@ export function ConquistasPageHeader({ onNewPress }: ConquistasPageHeaderProps) 
         style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
       >
         <Icon name="plus" size={18} color={colors.text.inverse} />
-        <Text style={styles.buttonText}>Nova</Text>
+        <Text style={styles.buttonText}>Nova conquista</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  texts: { flex: 1 },
+  container: { gap: spacing.lg },
   title: { fontSize: 28, fontWeight: "800", color: colors.text.primary },
   subtitle: {
     fontSize: 14,
@@ -50,13 +44,13 @@ const styles = StyleSheet.create({
   button: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "center",
+    gap: 8,
     backgroundColor: colors.brand.primary,
-    borderRadius: 14,
-    paddingVertical: 11,
-    paddingHorizontal: spacing.lg,
+    borderRadius: 16,
+    paddingVertical: 15,
     ...shadows.button,
   },
   buttonPressed: { backgroundColor: colors.brand.primaryPressed },
-  buttonText: { fontSize: 15, fontWeight: "700", color: colors.text.inverse },
+  buttonText: { fontSize: 16, fontWeight: "700", color: colors.text.inverse },
 });

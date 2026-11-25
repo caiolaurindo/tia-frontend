@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useConquistasContext } from "../context/conquistas-context";
-import { SUGESTOES, TURMA_TODAS } from "../data/conquistas-options";
+import { TURMA_TODAS } from "../data/conquistas-options";
 import { ConquistaCategoria, TurmaFiltro } from "../types/conquistas.types";
 import { normalizarTexto } from "../utils/conquistas-progress";
 
@@ -10,28 +10,31 @@ export function useConquistas() {
   const [turma, setTurma] = useState<TurmaFiltro>(TURMA_TODAS);
   const [busca, setBusca] = useState("");
   const [categoria, setCategoria] = useState<ConquistaCategoria | null>(null);
+  const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
 
   const ativas = useMemo(() => conquistas.filter((c) => c.ativa), [conquistas]);
+  const arquivadas = useMemo(
+    () => conquistas.filter((c) => !c.ativa),
+    [conquistas],
+  );
+
+  // Lista de partida: ativas ou arquivadas, conforme o filtro de status.
+  const lista = mostrarArquivadas ? arquivadas : ativas;
 
   const visiveis = useMemo(() => {
     const termo = normalizarTexto(busca);
-    return ativas.filter(
+    return lista.filter(
       (c) =>
         // numa turma específica, só as conquistas vinculadas a ela
         (turma === TURMA_TODAS || c.progressoPorTurma[turma] !== undefined) &&
         (!categoria || c.categoria === categoria) &&
         normalizarTexto(c.nome).includes(termo),
     );
-  }, [ativas, turma, categoria, busca]);
-
-  const sugestoes = useMemo(
-    () => SUGESTOES.filter((s) => !ativas.some((a) => a.nome === s.nome)),
-    [ativas],
-  );
+  }, [lista, turma, categoria, busca]);
 
   const turmaOptions = useMemo(
     () => [
-      { label: "Todas", value: TURMA_TODAS },
+      { label: "Todas as turmas", value: TURMA_TODAS },
       ...turmas.map((t) => ({ label: t.rotulo, value: t.id })),
     ],
     [turmas],
@@ -48,9 +51,13 @@ export function useConquistas() {
     setBusca,
     categoria,
     setCategoria,
+    mostrarArquivadas,
+    setMostrarArquivadas,
     visiveis,
-    sugestoes,
-    semConquistas: ativas.length === 0,
-    semResultados: ativas.length > 0 && visiveis.length === 0,
+    totalAtivas: ativas.length,
+    totalArquivadas: arquivadas.length,
+    semConquistas: !mostrarArquivadas && ativas.length === 0,
+    semArquivadas: mostrarArquivadas && arquivadas.length === 0,
+    semResultados: lista.length > 0 && visiveis.length === 0,
   };
 }

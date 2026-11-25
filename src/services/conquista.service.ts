@@ -26,13 +26,18 @@ export interface ProgressoConquistaApi {
   naoTrabalhado: number;
 }
 
+/** Campos editáveis de uma conquista (o body do backend é strict). */
+export type AtualizarConquistaInput = Partial<
+  Omit<NovaConquistaInput, "turmaIds">
+>;
+
 /** Converte para o tipo da tela. O progresso por turma é montado no contexto. */
 function toConquista(c: ConquistaApi): Conquista {
   return {
     id: String(c.id),
     nome: c.nome,
     categoria: c.categoria,
-    nivel: c.nivel ?? undefined,
+    nivel: c.nivel || undefined, // "" (nível apagado) vira sem nível
     ativa: c.ativa,
     progressoPorTurma: {},
   };
@@ -53,6 +58,13 @@ export const conquistaService = {
   ): Promise<Conquista> => {
     const criada = await api.post<ConquistaApi>("/conquistas", dados);
     return toConquista(criada);
+  },
+
+  atualizar: async (
+    id: string,
+    dados: AtualizarConquistaInput,
+  ): Promise<void> => {
+    await api.put<ConquistaApi>(`/conquistas/${id}`, dados);
   },
 
   definirAtiva: async (id: string, ativa: boolean): Promise<void> => {
