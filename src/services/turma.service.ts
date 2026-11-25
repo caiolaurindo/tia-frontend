@@ -5,6 +5,9 @@ export interface TurmaApi {
   nome: string;
   serie: string;
   anoLetivo: number;
+  faixaEtaria?: string | null;
+  turno?: string | null;
+  descricao?: string | null;
   arquivada: boolean;
 }
 
@@ -12,6 +15,19 @@ export interface TurmaPayload {
   nome: string;
   serie: string;
   anoLetivo: number;
+  faixaEtaria?: string | null;
+  turno?: string | null;
+  descricao?: string | null;
+}
+
+interface TurmasPaginadas {
+  dados: TurmaApi[];
+  paginacao: {
+    pagina: number;
+    limite: number;
+    total: number;
+    totalPaginas: number;
+  };
 }
 
 function extrairListaTurmas(resposta: unknown): TurmaApi[] {
@@ -46,9 +62,32 @@ function extrairTurma(resposta: unknown): TurmaApi {
   return resposta as TurmaApi;
 }
 
+async function listarTodas(): Promise<TurmaApi[]> {
+  const primeiraPagina = await api.get<TurmasPaginadas>("/turmas", {
+    page: 1,
+    limit: 100,
+  });
+
+  const turmas = [...primeiraPagina.dados];
+
+  for (
+    let pagina = 2;
+    pagina <= primeiraPagina.paginacao.totalPaginas;
+    pagina++
+  ) {
+    const resposta = await api.get<TurmasPaginadas>("/turmas", {
+      page: pagina,
+      limit: 100,
+    });
+
+    turmas.push(...resposta.dados);
+  }
+
+  return turmas;
+}
+
 export const turmaService = {
-  listar: async () =>
-    extrairListaTurmas(await api.get<unknown>("/turmas")),
+  listar: listarTodas,
 
   buscarPorId: async (id: string | number) =>
     extrairTurma(await api.get<unknown>(`/turmas/${id}`)),
