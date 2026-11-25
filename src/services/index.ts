@@ -4,3 +4,4 @@ export * from "./turma.service";
 export * from "./aula.service";
 export * from "./conquista.service";
 export * from "./registro.service";
+export * from "./aluno.service";

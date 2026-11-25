@@ -8,12 +8,14 @@ import {
   View,
 } from "react-native";
 import { Button, Icon, TextField } from "@/components/ui";
+import { useTurmasContext } from "@/features/turmas/context/turmas-context";
 import { colors, radii, spacing } from "@/theme";
 import {
   AlunoItem,
   AlunoStatus,
   SaveAlunoInput,
 } from "../types/alunos.types";
+import { brParaIso, isoParaBr } from "../utils/aluno-mappers";
 
 const STATUS_OPTIONS: { value: AlunoStatus; label: string }[] = [
   { value: "no_ritmo", label: "No ritmo" },
@@ -25,7 +27,7 @@ export interface AlunoFormModalProps {
   visible: boolean;
   initialAluno?: AlunoItem;
   onClose: () => void;
-  onSave: (input: SaveAlunoInput) => void;
+  onSave: (input: SaveAlunoInput) => Promise<unknown> | void;
 }
 
 export function AlunoFormModal({
@@ -34,48 +36,69 @@ export function AlunoFormModal({
   onClose,
   onSave,
 }: AlunoFormModalProps) {
+  const { turmas } = useTurmasContext();
+  const turmasAtivas = turmas.filter((t) => t.status === "ativa");
+
   const [name, setName] = useState("");
-  const [turmaName, setTurmaName] = useState("");
-  const [grade, setGrade] = useState("");
-  const [ageText, setAgeText] = useState("12");
+  const [turmaId, setTurmaId] = useState("");
+  const [birthText, setBirthText] = useState("");
   const [guardianName, setGuardianName] = useState("");
   const [status, setStatus] = useState<AlunoStatus>("no_ritmo");
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
+    /* eslint-disable react-hooks/set-state-in-effect */
     setName(initialAluno?.name ?? "");
-    setTurmaName(initialAluno?.turmaName ?? "English Explorers");
-    setGrade(initialAluno?.grade ?? "6º A");
-    setAgeText(String(initialAluno?.age ?? 12));
-    setGuardianName(initialAluno?.guardianName ?? "");
+    setTurmaId(initialAluno?.turmaId ?? "");
+    setBirthText(initialAluno ? isoParaBr(initialAluno.birthDate) : "");
+    setGuardianName(
+      initialAluno && initialAluno.guardianName !== "Não informado"
+        ? initialAluno.guardianName
+        : ""
+    );
     setStatus(initialAluno?.status ?? "no_ritmo");
     setError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialAluno, visible]);
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      setError("Informe o nome do aluno.");
+  // Sem turma escolhida, assume a primeira ativa assim que as turmas carregarem.
+  const turmaSelecionada = turmaId || turmasAtivas[0]?.id || "";
+
+  const handleSave = async () => {
+    if (isSaving) return;
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Informe o nome do aluno (mínimo 2 caracteres).");
       return;
     }
-    if (!turmaName.trim()) {
-      setError("Informe a turma.");
+    if (!turmaSelecionada) {
+      setError("Selecione a turma.");
+      return;
+    }
+    const birthDate = brParaIso(birthText);
+    if (!birthDate) {
+      setError("Informe uma data de nascimento válida (DD/MM/AAAA).");
       return;
     }
 
-    const parsedAge = Number(ageText);
-    const age =
-      Number.isFinite(parsedAge) && parsedAge > 0 ? Math.round(parsedAge) : 12;
-
-    onSave({
-      name: name.trim(),
-      turmaName: turmaName.trim(),
-      grade: grade.trim() || "6º A",
-      age,
-      guardianName: guardianName.trim() || "Não informado",
-      status,
-    });
-    onClose();
+    try {
+      setIsSaving(true);
+      await onSave({
+        name: name.trim(),
+        turmaId: turmaSelecionada,
+        birthDate,
+        guardianName: guardianName.trim(),
+        status,
+      });
+      onClose();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Não foi possível salvar o aluno."
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -112,31 +135,48 @@ export function AlunoFormModal({
               }}
             />
 
-            <View style={styles.row}>
-              <TextField
-                label="Turma"
-                placeholder="English Explorers"
-                value={turmaName}
-                onChangeText={setTurmaName}
-                containerStyle={styles.flexField}
-              />
-              <TextField
-                label="Série"
-                placeholder="6º A"
-                value={grade}
-                onChangeText={setGrade}
-                containerStyle={styles.smallField}
-              />
+            <View style={styles.statusSection}>
+              <Text style={styles.statusLabel}>Turma</Text>
+              {turmasAtivas.length === 0 ? (
+                <Text style={styles.errorText}>
+                  Cadastre uma turma antes de adicionar alunos.
+                </Text>
+              ) : (
+                <View style={styles.statusRow}>
+                  {turmasAtivas.map((turma) => {
+                        const selected = turmaSelecionada === turma.id;
+                    return (
+                      <Pressable
+                        key={turma.id}
+                        onPress={() => setTurmaId(turma.id)}
+                        style={[
+                          styles.statusChip,
+                          selected && styles.statusChipSelected,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            selected && styles.statusChipTextSelected,
+                          ]}
+                        >
+                          {turma.nome}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             <View style={styles.row}>
               <TextField
-                label="Idade"
-                placeholder="12"
+                label="Nascimento"
+                placeholder="DD/MM/AAAA"
                 keyboardType="numeric"
-                value={ageText}
-                onChangeText={setAgeText}
-                containerStyle={styles.smallField}
+                value={birthText}
+                onChangeText={setBirthText}
+                containerStyle={styles.dateField}
               />
               <TextField
                 label="Responsável"
@@ -184,8 +224,11 @@ export function AlunoFormModal({
               style={styles.footerBtn}
             />
             <Button
-              title={initialAluno ? "Salvar" : "Adicionar"}
-              onPress={handleSave}
+              title={
+                isSaving ? "Salvando..." : initialAluno ? "Salvar" : "Adicionar"
+              }
+              onPress={() => void handleSave()}
+              disabled={isSaving}
               style={styles.footerBtn}
             />
           </View>
@@ -194,7 +237,6 @@ export function AlunoFormModal({
     </Modal>
   );
 }
-
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
@@ -232,6 +274,9 @@ const styles = StyleSheet.create({
   },
   smallField: {
     width: 96,
+  },
+  dateField: {
+    width: 140,
   },
   errorText: {
     fontSize: 13,

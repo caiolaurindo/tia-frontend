@@ -28,8 +28,10 @@ export interface AlunoItem {
   name: string;
   initials: string;
   avatarVariant: TagColorVariant;
+  turmaId: string;
   turmaName: string;
   grade: string;
+  birthDate: string; // AAAA-MM-DD
   age: number;
   guardianName: string;
   status: AlunoStatus;
@@ -41,9 +43,8 @@ export interface AlunoItem {
 
 export interface SaveAlunoInput {
   name: string;
-  turmaName: string;
-  grade: string;
-  age: number;
+  turmaId: string;
+  birthDate: string; // AAAA-MM-DD
   guardianName: string;
   status: AlunoStatus;
 }
