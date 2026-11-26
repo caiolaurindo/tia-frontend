@@ -1,13 +1,25 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Href, useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { AvatarInitials, Button, Card, Icon, IconName } from "@/components/ui";
+import type { StatusConquistaApi } from "@/services";
 import { colors, radii, spacing } from "@/theme";
 import { AlunoFormModal } from "../components/aluno-form-modal";
 import { useAlunosContext } from "../context/alunos-context";
-import { AlunoEventType, AlunoProfileTab } from "../types/alunos.types";
 import { useAlunoConquistas } from "../hooks/use-aluno-conquistas";
+import {
+  AlunoConquistaItem,
+  AlunoEventType,
+  AlunoProfileTab,
+} from "../types/alunos.types";
 
 const PROFILE_TABS: { key: AlunoProfileTab; label: string }[] = [
   { key: "visao_geral", label: "Visão geral" },
@@ -36,13 +48,22 @@ const EVENT_ICON_STYLE: Record<
   },
 };
 
+const STATUS_OPTIONS: { value: StatusConquistaApi; label: string }[] = [
+  { value: "NAO_TRABALHADO", label: "Não trabalhado" },
+  { value: "EM_DESENVOLVIMENTO", label: "Em desenv." },
+  { value: "EM_DESENVOLVIMENTO_AVANCADO", label: "Avançado" },
+  { value: "CONQUISTADO", label: "Conquistado" },
+];
+
 export function AlunoProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { getAlunoById, updateAluno } = useAlunosContext();
 
   const alunoBase = getAlunoById(id);
-  const { events, skills, achievementsCount } = useAlunoConquistas(alunoBase?.id);
+  const { events, skills, achievementsCount, itens, salvarStatus } =
+    useAlunoConquistas(alunoBase?.id, alunoBase?.turmaId);
+  const [savingId, setSavingId] = useState<number | null>(null);
   const aluno = useMemo(
     () =>
       alunoBase
@@ -63,8 +84,28 @@ export function AlunoProfileScreen() {
     return aluno.events.filter((ev) => ev.type === historyFilter);
   }, [aluno, historyFilter]);
 
+  const handleChangeStatus = async (
+    item: AlunoConquistaItem,
+    status: StatusConquistaApi
+  ) => {
+    if (savingId !== null) return;
+    try {
+      setSavingId(item.conquistaId);
+      await salvarStatus(item, status);
+    } catch (e) {
+      const mensagem =
+        e instanceof Error ? e.message : "Não foi possível salvar o status.";
+      if (Platform.OS === "web") {
+        window.alert(mensagem);
+      } else {
+        Alert.alert("Erro", mensagem);
+      }
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   if (!aluno) {
-    // ...resto igual
     return (
       <AppShell
         title="Perfil do aluno"
@@ -355,28 +396,49 @@ export function AlunoProfileScreen() {
 
       {activeTab === "evolucao" ? (
         <Card style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Evolução por habilidade</Text>
+          <Text style={styles.sectionTitle}>Evolução por conquista</Text>
 
-          <View style={styles.skillsList}>
-            {aluno.skills.map((skill) => (
-              <View key={skill.id} style={styles.skillItem}>
-                <View style={styles.skillHeader}>
-                  <Text style={styles.skillLabel}>{skill.label}</Text>
-                  <Text style={styles.skillPercent}>
-                    {skill.statusLabel} · {skill.percentage}%
-                  </Text>
+          {itens.length === 0 ? (
+            <Text style={styles.emptySectionText}>
+              A turma deste aluno ainda não tem conquistas vinculadas. Vincule
+              conquistas à turma na tela de Conquistas.
+            </Text>
+          ) : (
+            <View style={styles.skillsList}>
+              {itens.map((item) => (
+                <View key={item.conquistaId} style={styles.skillItem}>
+                  <Text style={styles.skillLabel}>{item.nome}</Text>
+                  <View style={styles.statusRow}>
+                    {STATUS_OPTIONS.map((opt) => {
+                      const selected = item.status === opt.value;
+                      return (
+                        <Pressable
+                          key={opt.value}
+                          disabled={savingId === item.conquistaId}
+                          onPress={() =>
+                            void handleChangeStatus(item, opt.value)
+                          }
+                          style={[
+                            styles.statusChip,
+                            selected && styles.statusChipSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusChipText,
+                              selected && styles.statusChipTextSelected,
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
-                      styles.progressFill,
-                      { width: `${Math.min(100, skill.percentage)}%` },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
         </Card>
       ) : null}
 
@@ -639,6 +701,31 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
   },
   historyChipTextSelected: {
+    color: colors.brand.primary,
+  },
+  statusRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  statusChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    backgroundColor: colors.background.primary,
+  },
+  statusChipSelected: {
+    backgroundColor: colors.brand.primaryLight,
+    borderColor: colors.brand.primary,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.text.secondary,
+  },
+  statusChipTextSelected: {
     color: colors.brand.primary,
   },
 });

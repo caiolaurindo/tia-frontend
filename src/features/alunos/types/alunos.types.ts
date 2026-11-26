@@ -48,3 +48,9 @@ export interface SaveAlunoInput {
   guardianName: string;
   status: AlunoStatus;
 }
+export interface AlunoConquistaItem {
+  conquistaId: number;
+  nome: string;
+  registroId?: number; // undefined = ainda sem registro do aluno
+  status: "NAO_TRABALHADO" | "EM_DESENVOLVIMENTO" | "EM_DESENVOLVIMENTO_AVANCADO" | "CONQUISTADO";
+}

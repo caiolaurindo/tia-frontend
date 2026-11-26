@@ -54,4 +54,25 @@ export const alunoService = {
 export const alunoConquistaService = {
   listarPorAluno: (alunoId: string | number) =>
     api.get<AlunoConquistaApi[]>("/aluno-conquistas", { alunoId }),
+
+  atribuir: (dados: {
+    alunoId: number;
+    conquistaId: number;
+    status: StatusConquistaApi;
+  }) => api.post<AlunoConquistaApi>("/aluno-conquistas", dados),
+
+  atualizarStatus: (id: number, status: StatusConquistaApi) =>
+    api.put<AlunoConquistaApi>(`/aluno-conquistas/${id}`, { status }),
+};
+
+export interface ConquistaDaTurmaApi {
+  id: number;
+  turmaId: number;
+  conquistaId: number;
+  conquista?: { id: number; nome: string };
+}
+
+export const turmaConquistaService = {
+  listarPorTurma: (turmaId: string | number) =>
+    api.get<ConquistaDaTurmaApi[]>(`/turmas/${turmaId}/conquistas`),
 };

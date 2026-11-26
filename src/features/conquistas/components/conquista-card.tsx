@@ -27,52 +27,58 @@ export function ConquistaCard({
     .join(" · ");
 
   return (
-    <Pressable
-      onPress={() => onPress(conquista)}
-      accessibilityRole="button"
-      accessibilityLabel={`${conquista.nome}. ${progresso.conquistado} de ${total} conquistaram`}
-    >
-      <Card>
-        <View style={styles.top}>
-          <View style={styles.iconBox}>
-            <Icon name="trophy" size={20} color={colors.brand.primary} />
+    <Card>
+      <View style={styles.wrapper}>
+        <Pressable
+          onPress={() => onPress(conquista)}
+          accessibilityRole="button"
+          accessibilityLabel={`${conquista.nome}. ${progresso.conquistado} de ${total} conquistaram`}
+        >
+          <View style={styles.top}>
+            <View style={styles.iconBox}>
+              <Icon name="trophy" size={20} color={colors.brand.primary} />
+            </View>
+
+            <View style={styles.info}>
+              <Text style={styles.name}>{conquista.nome}</Text>
+              <Text style={styles.meta}>{meta}</Text>
+            </View>
+
+            <View style={styles.score}>
+              <Text style={styles.scoreValue}>
+                {progresso.conquistado} de {total}
+              </Text>
+              <Text style={styles.scoreLabel}>conquistaram</Text>
+            </View>
+
+            {/* Reserva o espaço do botão de opções, que fica fora do Pressable */}
+            <View style={styles.moreSpacer} />
           </View>
 
-          <View style={styles.info}>
-            <Text style={styles.name}>{conquista.nome}</Text>
-            <Text style={styles.meta}>{meta}</Text>
-          </View>
+          <ConquistaProgressBar progresso={progresso} />
+        </Pressable>
 
-          <View style={styles.score}>
-            <Text style={styles.scoreValue}>
-              {progresso.conquistado} de {total}
-            </Text>
-            <Text style={styles.scoreLabel}>conquistaram</Text>
-          </View>
-
-          <Pressable
-            onPress={() => onMorePress(conquista)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Mais opções de ${conquista.nome}`}
-            style={styles.more}
-          >
-            <Icon
-              name="more"
-              size={18}
-              color={colors.icon.default}
-              style={styles.moreIcon}
-            />
-          </Pressable>
-        </View>
-
-        <ConquistaProgressBar progresso={progresso} />
-      </Card>
-    </Pressable>
+        <Pressable
+          onPress={() => onMorePress(conquista)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Mais opções de ${conquista.nome}`}
+          style={styles.more}
+        >
+          <Icon
+            name="more"
+            size={18}
+            color={colors.icon.default}
+            style={styles.moreIcon}
+          />
+        </Pressable>
+      </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: { position: "relative" },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   iconBox: {
     width: 40,
@@ -94,11 +100,14 @@ const styles = StyleSheet.create({
   scoreValue: { fontSize: 17, fontWeight: "800", color: colors.text.primary },
   scoreLabel: { fontSize: 11, color: colors.text.secondary },
   moreIcon: { transform: [{ rotate: "90deg" }] },
+  moreSpacer: { width: 32, marginRight: -spacing.sm },
   more: {
+    position: "absolute",
+    top: 0,
+    right: -spacing.sm,
     width: 32,
-    height: 32,
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: -spacing.sm,
   },
 });
