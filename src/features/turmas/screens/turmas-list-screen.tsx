@@ -11,6 +11,8 @@ import { AppShell } from "@/components/layout";
 import { Button, SearchBar } from "@/components/ui";
 import { colors, spacing, radii } from "@/theme";
 
+import { useAlunosContext } from "@/features/alunos/context/alunos-context";
+import { useAulasContext } from "@/features/aulas/context/aulas-context";
 import { useTurmasContext } from "../context/turmas-context";
 import { TurmaCard } from "../components/turma-card";
 import { TurmaStatus } from "../types/turmas.types";
@@ -29,6 +31,9 @@ export function TurmasListScreen() {
     error,
     refreshTurmas,
   } = useTurmasContext();
+
+  const { alunos } = useAlunosContext();
+  const { lessons } = useAulasContext();
 
   const filteredTurmas = turmas.filter((turma) => {
     const correspondeBusca = turma.nome
@@ -130,6 +135,16 @@ export function TurmasListScreen() {
             <TurmaCard
               key={turma.id}
               turma={turma}
+              quantidadeAlunos={
+                alunos.filter(
+                  (aluno) => aluno.turmaId === String(turma.id)
+                ).length
+              }
+              quantidadeAulas={
+                lessons.filter(
+                  (lesson) => lesson.turmaId === String(turma.id)
+                ).length
+              }
               onPress={() =>
                 router.push({
                   pathname: "/turmas/detalhes/[id]",
