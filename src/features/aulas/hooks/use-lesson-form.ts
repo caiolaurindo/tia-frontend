@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTurmasContext } from "@/features/turmas/context/turmas-context";
+import type { Conquista } from "@/features/conquistas/types/conquistas.types";
 import { TagColorVariant } from "@/theme";
 import { useAulasContext } from "../context/aulas-context";
 import {
@@ -15,35 +16,49 @@ function formatDateBr(dateIso?: string): string {
     const [y, m, d] = dateIso.split("-");
     return `${d}/${m}/${y}`;
   }
+
   const now = new Date();
   const d = String(now.getDate()).padStart(2, "0");
   const m = String(now.getMonth() + 1).padStart(2, "0");
+
   return `${d}/${m}/${now.getFullYear()}`;
 }
 
 function parseDateToIso(value: string): string | null {
   const trimmed = value.trim();
   const br = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(trimmed);
+
   if (br) {
     const d = Number(br[1]);
     const m = Number(br[2]);
     const y = Number(br[3]);
     const dt = new Date(y, m - 1, d, 12, 0, 0);
-    if (dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d) {
+
+    if (
+      dt.getFullYear() === y &&
+      dt.getMonth() === m - 1 &&
+      dt.getDate() === d
+    ) {
       return `${br[3]}-${br[2]}-${br[1]}`;
     }
+
     return null;
   }
+
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return trimmed;
   }
+
   return null;
 }
 
 function getDayOfWeekFromIso(dateIso: string): number {
   const [y, m, d] = dateIso.split("-").map(Number);
+
   if (!y || !m || !d) return 0;
+
   const jsDay = new Date(y, m - 1, d, 12, 0, 0).getDay();
+
   return jsDay === 0 ? 4 : Math.min(4, jsDay - 1);
 }
 
@@ -57,49 +72,70 @@ export interface LessonFormErrors {
 
 export function useLessonForm(
   existingLesson?: LessonItem,
-  initialTurmaId?: string
+  initialTurmaId?: string,
+  conquistasDisponiveis: Conquista[] = []
 ) {
   const { createLesson, updateLesson, deleteLesson } = useAulasContext();
   const { turmas } = useTurmasContext();
 
   const resolveTurmaIndex = useCallback(() => {
     const targetTurmaId = existingLesson?.turmaId ?? initialTurmaId;
+
     if (targetTurmaId) {
       const byId = turmas.findIndex((t) => t.id === targetTurmaId);
+
       if (byId >= 0) return byId;
     }
+
     if (existingLesson?.classGroup) {
-      const byName = turmas.findIndex((t) => t.nome === existingLesson.classGroup);
+      const byName = turmas.findIndex(
+        (t) => t.nome === existingLesson.classGroup
+      );
+
       if (byName >= 0) return byName;
     }
+
     return 0;
   }, [existingLesson, initialTurmaId, turmas]);
 
   const [title, setTitle] = useState(existingLesson?.title ?? "");
   const [groupIndex, setGroupIndex] = useState(resolveTurmaIndex);
+
   const [dateInput, setDateInput] = useState(
     formatDateBr(existingLesson?.dateIso)
   );
+
   const [startTime, setStartTime] = useState(
     existingLesson?.startTime ?? "10:00"
   );
-  const [endTime, setEndTime] = useState(existingLesson?.endTime ?? "11:00");
+
+  const [endTime, setEndTime] = useState(
+    existingLesson?.endTime ?? "11:00"
+  );
+
   const [content, setContent] = useState(existingLesson?.content ?? "");
   const [newActivityText, setNewActivityText] = useState("");
+
   const [activities, setActivities] = useState<LessonActivity[]>(
     existingLesson?.activities ?? []
   );
+
   const [selectedAchievements, setSelectedAchievements] = useState<string[]>(
-    existingLesson?.achievements.map((a) => a.title) ?? []
+    existingLesson?.achievements.map((a) => a.id) ?? []
   );
+
   const [errors, setErrors] = useState<LessonFormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (turmas.length === 0) return;
+
     const nextIdx = resolveTurmaIndex();
+
     setGroupIndex((prev) =>
-      prev >= turmas.length || Boolean(initialTurmaId) || Boolean(existingLesson)
+      prev >= turmas.length ||
+      Boolean(initialTurmaId) ||
+      Boolean(existingLesson)
         ? nextIdx
         : prev
     );
@@ -107,6 +143,7 @@ export function useLessonForm(
 
   const addActivity = useCallback(() => {
     const trimmed = newActivityText.trim();
+
     if (!trimmed) return;
 
     const nextColor =
@@ -120,6 +157,7 @@ export function useLessonForm(
         color: nextColor,
       },
     ]);
+
     setNewActivityText("");
   }, [activities.length, newActivityText]);
 
@@ -127,11 +165,11 @@ export function useLessonForm(
     setActivities((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  const toggleAchievement = useCallback((titleText: string) => {
+  const toggleAchievement = useCallback((conquistaId: string) => {
     setSelectedAchievements((prev) =>
-      prev.includes(titleText)
-        ? prev.filter((item) => item !== titleText)
-        : [...prev, titleText]
+      prev.includes(conquistaId)
+        ? prev.filter((id) => id !== conquistaId)
+        : [...prev, conquistaId]
     );
   }, []);
 
@@ -141,20 +179,25 @@ export function useLessonForm(
     if (!turmas[groupIndex] && !turmas[0]) {
       nextErrors.turma = "Cadastre e selecione uma turma para a aula.";
     }
+
     if (!parseDateToIso(dateInput)) {
       nextErrors.date = "Informe uma data válida (DD/MM/AAAA).";
     }
+
     if (!title.trim()) {
       nextErrors.title = "Informe o tema ou título da aula.";
     }
+
     if (!content.trim()) {
       nextErrors.content = "Descreva o conteúdo que será trabalhado.";
     }
+
     if (!startTime.trim()) {
       nextErrors.startTime = "Informe o horário.";
     }
 
     setErrors(nextErrors);
+
     return Object.keys(nextErrors).length === 0;
   }, [content, dateInput, groupIndex, startTime, title, turmas]);
 
@@ -163,15 +206,26 @@ export function useLessonForm(
 
     const chosenGroup = turmas[groupIndex] ?? turmas[0];
     const dateIso = parseDateToIso(dateInput);
+
     if (!chosenGroup || !dateIso) return null;
 
-    const formattedAchievements: LessonAchievement[] = selectedAchievements.map(
-      (achTitle, idx) => ({
-        id: `ach-form-${idx}`,
-        title: achTitle,
-        completed: true,
-      })
-    );
+    const formattedAchievements: LessonAchievement[] =
+      selectedAchievements.map((conquistaId) => {
+        const conquista = conquistasDisponiveis.find(
+          (item) => item.id === conquistaId
+        );
+
+        const existente = existingLesson?.achievements.find(
+          (item) => item.id === conquistaId
+        );
+
+        return {
+          id: conquistaId,
+          title: conquista?.nome ?? existente?.title ?? "",
+          completed: true,
+          linkId: existente?.linkId,
+        };
+      });
 
     const payload = {
       turmaId: chosenGroup.id,
@@ -190,8 +244,10 @@ export function useLessonForm(
 
     try {
       setIsSaving(true);
+
       if (existingLesson) {
         await updateLesson(existingLesson.id, payload);
+
         return { ...existingLesson, ...payload };
       }
 
@@ -202,6 +258,7 @@ export function useLessonForm(
   }, [
     activities,
     content,
+    conquistasDisponiveis,
     createLesson,
     dateInput,
     endTime,
@@ -218,9 +275,11 @@ export function useLessonForm(
 
   const removeLesson = useCallback(async (): Promise<boolean> => {
     if (!existingLesson || isSaving) return false;
+
     try {
       setIsSaving(true);
       await deleteLesson(existingLesson.id);
+
       return true;
     } finally {
       setIsSaving(false);
@@ -232,17 +291,26 @@ export function useLessonForm(
     title,
     setTitle: (val: string) => {
       setTitle(val);
-      if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
+
+      if (errors.title) {
+        setErrors((prev) => ({ ...prev, title: undefined }));
+      }
     },
     groupIndex,
     setGroupIndex: (idx: number) => {
       setGroupIndex(idx);
-      if (errors.turma) setErrors((prev) => ({ ...prev, turma: undefined }));
+
+      if (errors.turma) {
+        setErrors((prev) => ({ ...prev, turma: undefined }));
+      }
     },
     dateInput,
     setDateInput: (val: string) => {
       setDateInput(val);
-      if (errors.date) setErrors((prev) => ({ ...prev, date: undefined }));
+
+      if (errors.date) {
+        setErrors((prev) => ({ ...prev, date: undefined }));
+      }
     },
     startTime,
     setStartTime,
@@ -251,7 +319,10 @@ export function useLessonForm(
     content,
     setContent: (val: string) => {
       setContent(val);
-      if (errors.content) setErrors((prev) => ({ ...prev, content: undefined }));
+
+      if (errors.content) {
+        setErrors((prev) => ({ ...prev, content: undefined }));
+      }
     },
     newActivityText,
     setNewActivityText,

@@ -1,6 +1,11 @@
+
 import { TagColorVariant } from "@/theme";
 
-export type LessonStatus = "proxima" | "planejada" | "em_andamento" | "concluida";
+export type LessonStatus =
+  | "proxima"
+  | "planejada"
+  | "em_andamento"
+  | "concluida";
 
 export type AulasViewMode = "lista" | "calendario";
 
@@ -20,6 +25,7 @@ export interface LessonAchievement {
   id: string;
   title: string;
   completed?: boolean;
+  linkId?: string;
 }
 
 export interface StudentLessonRecord {
