@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { Card, Icon, SearchBar } from "@/components/ui";
@@ -16,6 +16,7 @@ export function AulaTrackingScreen() {
 
   const {
     lesson,
+    isLoadingStudents,
     isPaused,
     elapsedMinutes,
     searchQuery,
@@ -39,7 +40,7 @@ export function AulaTrackingScreen() {
       <AppShell
         title="Acompanhamento da aula"
         onBackPress={() => router.back()}
-        onLogoPress={() => router.push("/aulas")}
+        onLogoPress={() => router.replace("/home")}
         activeTab="registrar"
       >
         <Card style={styles.emptyBox}>
@@ -61,7 +62,7 @@ export function AulaTrackingScreen() {
     <AppShell
       title="Acompanhamento da aula"
       onBackPress={() => router.back()}
-      onLogoPress={() => router.push("/aulas")}
+      onLogoPress={() => router.replace("/home")}
       activeTab="registrar"
     >
       <LiveLessonBanner
@@ -86,12 +87,19 @@ export function AulaTrackingScreen() {
           </Text>
         </View>
 
-        {filteredStudents.length === 0 ? (
+        {isLoadingStudents ? (
+          <View style={styles.emptyBox}>
+            <ActivityIndicator color={colors.brand.primary} />
+            <Text style={styles.emptyText}>Carregando alunos da turma...</Text>
+          </View>
+        ) : filteredStudents.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text style={styles.emptyText}>
               {showOnlyPending
                 ? "Todos os alunos listados já foram registrados!"
-                : "Nenhum aluno encontrado para esta busca."}
+                : totalStudentsCount === 0
+                  ? "Nenhum aluno cadastrado para esta turma."
+                  : "Nenhum aluno encontrado para esta busca."}
             </Text>
             {showOnlyPending ? (
               <Pressable onPress={togglePendingFilter} style={styles.resetBtn}>
