@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,28 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CategoriaRegistro, DetalheRapido } from '../types/registros.types';
 import { ApiError } from '@/services/api';
+import { alunoService } from '@/services/aluno.service';
 import { AulaApi, aulaService } from '@/services/aula.service';
 import { RegistroPayload, registroService } from '@/services/registro.service';
+
+const ROTA_DASHBOARD = '/home' as any;
+
+type EtapaRegistro = 'conteudo' | 'acontecimento' | 'detalhes';
+
+type AlunoItem = {
+  id: number;
+  nome: string;
+  turmaId?: number;
+  turma_id?: number;
+};
 
 function formatarDataISO(date = new Date()): string {
   const ano = date.getFullYear();
@@ -77,15 +92,27 @@ function montarPayloadRegistro(params: {
 
 export function NovoRegistroScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ alunoId?: string; aulaId?: string }>();
 
-  const [etapaAtiva, setEtapaAtiva] = useState<'conteudo' | 'acontecimento' | 'detalhes'>('acontecimento');
+  const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const posicoesSecoes = useRef<Record<EtapaRegistro, number>>({
+    conteudo: 0,
+    acontecimento: 0,
+    detalhes: 0,
+  });
+
+  const [etapaAtiva, setEtapaAtiva] = useState<EtapaRegistro>('conteudo');
   const [aulas, setAulas] = useState<AulaApi[]>([]);
   const [aulaSelecionada, setAulaSelecionada] = useState<AulaApi | null>(null);
+  const [alunos, setAlunos] = useState<AlunoItem[]>([]);
+  const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoItem | null>(null);
+
   const [alunoIdManual, setAlunoIdManual] = useState('1');
   const [aulaIdManual, setAulaIdManual] = useState('1');
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [modalAulaVisivel, setModalAulaVisivel] = useState(false);
+  const [modalAlunoVisivel, setModalAlunoVisivel] = useState(false);
 
   const [categoria, setCategoria] = useState<CategoriaRegistro>('participou');
   const [detalhesSelecionados, setDetalhesSelecionados] = useState<DetalheRapido[]>(['Espontaneamente']);
@@ -94,36 +121,80 @@ export function NovoRegistroScreen() {
   useEffect(() => {
     let ativo = true;
 
-    async function carregarAulas() {
+    async function carregarDados() {
       try {
         setCarregandoDados(true);
-        const [resAulas] = await Promise.allSettled([aulaService.listar()]);
+        const [resAulas, resAlunos] = await Promise.allSettled([
+          aulaService.listar(),
+          alunoService.listar(),
+        ]);
 
         if (!ativo) return;
 
         const listaAulas = resAulas.status === 'fulfilled' ? resAulas.value : [];
         setAulas(listaAulas);
 
-        const aulaInicial = listaAulas[0] ?? null;
+        const aulaParamId = Number(params.aulaId);
+        const aulaInicial =
+          listaAulas.find((a) => a.id === aulaParamId) ?? listaAulas[0] ?? null;
         setAulaSelecionada(aulaInicial);
         if (aulaInicial?.id) {
           setAulaIdManual(String(aulaInicial.id));
+        }
+
+        const listaAlunos: AlunoItem[] =
+          resAlunos.status === 'fulfilled' && Array.isArray(resAlunos.value)
+            ? resAlunos.value
+            : [];
+        setAlunos(listaAlunos);
+
+        const alunoParamId = Number(params.alunoId);
+        const alunoInicial =
+          listaAlunos.find((al) => al.id === alunoParamId) ?? listaAlunos[0] ?? null;
+        setAlunoSelecionado(alunoInicial);
+        if (alunoInicial?.id) {
+          setAlunoIdManual(String(alunoInicial.id));
         }
       } finally {
         if (ativo) setCarregandoDados(false);
       }
     }
 
-    carregarAulas();
+    carregarDados();
     return () => {
       ativo = false;
     };
-  }, []);
+  }, [params.alunoId, params.aulaId]);
+
+  const irParaEtapa = (etapa: EtapaRegistro) => {
+    setEtapaAtiva(etapa);
+    const destinoY = Math.max(0, posicoesSecoes.current[etapa] - 12);
+    scrollViewRef.current?.scrollTo({ y: destinoY, animated: true });
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const scrollY = event.nativeEvent.contentOffset.y + 80;
+    const { conteudo, acontecimento, detalhes } = posicoesSecoes.current;
+
+    if (detalhes > 0 && scrollY >= detalhes) {
+      setEtapaAtiva('detalhes');
+    } else if (acontecimento > 0 && scrollY >= acontecimento) {
+      setEtapaAtiva('acontecimento');
+    } else if (conteudo > 0) {
+      setEtapaAtiva('conteudo');
+    }
+  };
 
   const handleSelecionarAula = (aula: AulaApi) => {
     setAulaSelecionada(aula);
     setAulaIdManual(String(aula.id));
     setModalAulaVisivel(false);
+  };
+
+  const handleSelecionarAluno = (aluno: AlunoItem) => {
+    setAlunoSelecionado(aluno);
+    setAlunoIdManual(String(aluno.id));
+    setModalAlunoVisivel(false);
   };
 
   const toggleDetalhe = (detalhe: DetalheRapido) => {
@@ -137,7 +208,7 @@ export function NovoRegistroScreen() {
   const handleSalvar = async () => {
     if (salvando) return;
 
-    const alunoIdFinal = Number(alunoIdManual);
+    const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
     const aulaIdFinal = aulaSelecionada?.id ?? Number(aulaIdManual);
 
     if (
@@ -146,7 +217,7 @@ export function NovoRegistroScreen() {
       !Number.isInteger(aulaIdFinal) ||
       aulaIdFinal <= 0
     ) {
-      Alert.alert('Atenção', 'Informe um ID válido para o aluno e para a aula antes de salvar.');
+      Alert.alert('Atenção', 'Selecione um aluno e uma aula válidos antes de salvar.');
       return;
     }
 
@@ -169,7 +240,7 @@ export function NovoRegistroScreen() {
       await registroService.criar(payload);
 
       Alert.alert('Sucesso', 'Registro salvo com sucesso!', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => router.replace(ROTA_DASHBOARD) },
       ]);
     } catch (error) {
       const mensagem =
@@ -185,18 +256,43 @@ export function NovoRegistroScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoText}>T</Text>
-          </View>
-          <Text style={styles.headerTitle}>Novo registro</Text>
+        <View style={styles.headerLeftGroup}>
+          <TouchableOpacity
+            style={styles.circleButton}
+            onPress={() => router.replace(ROTA_DASHBOARD)}
+          >
+            <Ionicons name="arrow-back" size={20} color="#0F172A" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.replace(ROTA_DASHBOARD)}
+          >
+            <Image
+              source={require('../../../../assets/expo.icon/Assets/logo.png')}
+              style={styles.appIconImage}
+              contentFit="cover"
+            />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Ionicons name="notifications-outline" size={20} color="#334155" />
+
+        <Text style={styles.headerTitle}>Novo registro</Text>
+
+        <TouchableOpacity
+          style={styles.circleButton}
+          onPress={() => router.replace(ROTA_DASHBOARD)}
+        >
+          <Ionicons name="home-outline" size={20} color="#0F172A" />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         <View style={styles.sectionHeader}>
           <Text style={styles.mainHeading}>Novo registro</Text>
           <Text style={styles.subHeading}>Registre um acontecimento em poucos cliques durante a aula.</Text>
@@ -204,12 +300,15 @@ export function NovoRegistroScreen() {
 
         <TouchableOpacity
           style={styles.audioBanner}
+          activeOpacity={0.85}
           onPress={() => router.push('/registros/audio' as any)}
         >
           <View style={styles.audioBannerHeader}>
-            <View>
+            <View style={{ flex: 1, paddingRight: 8 }}>
               <Text style={styles.audioBannerTitle}>Registro por áudio</Text>
-              <Text style={styles.audioBannerSubtitle}>Grave um trecho curto e a transcrição aparece aqui para revisão.</Text>
+              <Text style={styles.audioBannerSubtitle}>
+                Grave um trecho curto e a transcrição aparece aqui para revisão.
+              </Text>
             </View>
             <View style={styles.mvpBadge}>
               <Text style={styles.mvpBadgeText}>MVP</Text>
@@ -223,57 +322,94 @@ export function NovoRegistroScreen() {
           </View>
           <View style={styles.audioBannerTags}>
             <View style={styles.tagItem}>
-              <Feather name="mic" size={12} color="#2563EB" />
+              <Feather name="mic" size={13} color="#2563EB" />
               <Text style={styles.tagText}>Gravar</Text>
             </View>
             <View style={styles.tagItem}>
-              <MaterialCommunityIcons name="text-recognition" size={12} color="#059669" />
+              <MaterialCommunityIcons name="text-recognition" size={13} color="#059669" />
               <Text style={[styles.tagText, { color: '#059669' }]}>Transcrição</Text>
             </View>
           </View>
         </TouchableOpacity>
 
         <View style={styles.stepsContainer}>
-          <TouchableOpacity style={styles.stepInactive} onPress={() => setEtapaAtiva('conteudo')}>
-            <Text style={styles.stepTextInactive}>1. Contexto</Text>
+          <TouchableOpacity
+            style={[styles.stepTab, etapaAtiva === 'conteudo' && styles.stepTabSelected]}
+            onPress={() => irParaEtapa('conteudo')}
+          >
+            <Text style={[styles.stepText, etapaAtiva === 'conteudo' && styles.stepTextSelected]}>
+              1. Contexto
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.stepActive, etapaAtiva === 'acontecimento' && styles.stepActiveSelected]}
-            onPress={() => setEtapaAtiva('acontecimento')}
+            style={[styles.stepTab, etapaAtiva === 'acontecimento' && styles.stepTabSelected]}
+            onPress={() => irParaEtapa('acontecimento')}
           >
-            <Text style={styles.stepTextActive}>2. Acontecimento</Text>
+            <Text style={[styles.stepText, etapaAtiva === 'acontecimento' && styles.stepTextSelected]}>
+              2. Acontecimento
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.stepInactive} onPress={() => setEtapaAtiva('detalhes')}>
-            <Text style={styles.stepTextInactive}>3. Detalhes</Text>
+          <TouchableOpacity
+            style={[styles.stepTab, etapaAtiva === 'detalhes' && styles.stepTabSelected]}
+            onPress={() => irParaEtapa('detalhes')}
+          >
+            <Text style={[styles.stepText, etapaAtiva === 'detalhes' && styles.stepTextSelected]}>
+              3. Detalhes
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.card}>
+        <View
+          style={[styles.card, etapaAtiva === 'conteudo' && styles.cardActive]}
+          onLayout={(e) => {
+            posicoesSecoes.current.conteudo = e.nativeEvent.layout.y;
+          }}
+        >
           <Text style={styles.cardTitle}>Quem e em qual aula?</Text>
 
           {carregandoDados ? (
             <ActivityIndicator color="#2563EB" style={{ marginVertical: 12 }} />
           ) : (
             <>
-              <View>
-                <Text style={styles.fieldLabelSmall}>ID DO ALUNO</Text>
-                <TextInput
-                  style={styles.idInput}
-                  keyboardType="number-pad"
-                  placeholder="Ex: 1"
-                  placeholderTextColor="#94A3B8"
-                  value={alunoIdManual}
-                  onChangeText={setAlunoIdManual}
-                />
-              </View>
+              {alunos.length > 0 ? (
+                <TouchableOpacity
+                  style={styles.dropdownField}
+                  onPress={() => setModalAlunoVisivel(true)}
+                >
+                  <View style={styles.dropdownLeft}>
+                    <Ionicons name="person-outline" size={20} color="#2563EB" />
+                    <View>
+                      <Text style={styles.fieldLabelSmall}>ALUNO</Text>
+                      <Text style={styles.fieldValue}>
+                        {alunoSelecionado
+                          ? `${alunoSelecionado.nome} (#${alunoSelecionado.id})`
+                          : 'Selecionar aluno'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-down" size={18} color="#64748B" />
+                </TouchableOpacity>
+              ) : (
+                <View>
+                  <Text style={styles.fieldLabelSmall}>ID DO ALUNO</Text>
+                  <TextInput
+                    style={styles.idInput}
+                    keyboardType="number-pad"
+                    placeholder="Ex: 1"
+                    placeholderTextColor="#94A3B8"
+                    value={alunoIdManual}
+                    onChangeText={setAlunoIdManual}
+                  />
+                </View>
+              )}
 
               {aulas.length > 0 ? (
                 <TouchableOpacity
-                  style={[styles.dropdownField, { marginTop: 10 }]}
+                  style={[styles.dropdownField, { marginTop: 12 }]}
                   onPress={() => setModalAulaVisivel(true)}
                 >
                   <View style={styles.dropdownLeft}>
-                    <Ionicons name="calendar-outline" size={20} color="#2563EB" style={{ marginRight: 8 }} />
+                    <Ionicons name="calendar-outline" size={20} color="#2563EB" />
                     <View>
                       <Text style={styles.fieldLabelSmall}>AULA</Text>
                       <Text style={styles.fieldValue}>
@@ -286,7 +422,7 @@ export function NovoRegistroScreen() {
                   <Ionicons name="chevron-down" size={18} color="#64748B" />
                 </TouchableOpacity>
               ) : (
-                <View style={{ marginTop: 10 }}>
+                <View style={{ marginTop: 12 }}>
                   <Text style={styles.fieldLabelSmall}>ID DA AULA</Text>
                   <TextInput
                     style={styles.idInput}
@@ -302,7 +438,12 @@ export function NovoRegistroScreen() {
           )}
         </View>
 
-        <View style={styles.card}>
+        <View
+          style={[styles.card, etapaAtiva === 'acontecimento' && styles.cardActive]}
+          onLayout={(e) => {
+            posicoesSecoes.current.acontecimento = e.nativeEvent.layout.y;
+          }}
+        >
           <Text style={styles.cardTitle}>O que aconteceu?</Text>
 
           <View style={styles.gridContainer}>
@@ -330,7 +471,13 @@ export function NovoRegistroScreen() {
                     size={22}
                     color={isSelected ? (item.alert ? '#DC2626' : '#2563EB') : '#64748B'}
                   />
-                  <Text style={[styles.gridItemText, isSelected && styles.gridItemTextSelected]}>
+                  <Text
+                    style={[
+                      styles.gridItemText,
+                      isSelected && styles.gridItemTextSelected,
+                      item.alert && isSelected && { color: '#B91C1C' },
+                    ]}
+                  >
                     {item.label}
                   </Text>
                 </TouchableOpacity>
@@ -339,7 +486,12 @@ export function NovoRegistroScreen() {
           </View>
         </View>
 
-        <View style={styles.card}>
+        <View
+          style={[styles.card, etapaAtiva === 'detalhes' && styles.cardActive]}
+          onLayout={(e) => {
+            posicoesSecoes.current.detalhes = e.nativeEvent.layout.y;
+          }}
+        >
           <Text style={styles.cardTitle}>Detalhes rápidos</Text>
 
           <View style={styles.chipsContainer}>
@@ -382,6 +534,36 @@ export function NovoRegistroScreen() {
       </ScrollView>
 
       <Modal
+        visible={modalAlunoVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalAlunoVisivel(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalAlunoVisivel(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione o aluno</Text>
+            <ScrollView style={{ maxHeight: 280 }}>
+              {alunos.map((aluno) => (
+                <TouchableOpacity
+                  key={aluno.id}
+                  style={styles.modalOption}
+                  onPress={() => handleSelecionarAluno(aluno)}
+                >
+                  <Text style={styles.modalOptionText}>
+                    {aluno.nome} (#{aluno.id})
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      <Modal
         visible={modalAulaVisivel}
         transparent
         animationType="fade"
@@ -417,58 +599,189 @@ export function NovoRegistroScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E2E8F0' },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoBadge: { width: 32, height: 32, backgroundColor: '#2563EB', borderRadius: 6, justifyContent: 'center', alignItems: 'center' },
-  logoText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: '#1E293B' },
-  notificationButton: { padding: 8 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  headerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  appIconImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+  },
+  circleButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#0F172A' },
   scrollContent: { padding: 16, paddingBottom: 40 },
   sectionHeader: { marginBottom: 16 },
-  mainHeading: { fontSize: 22, fontWeight: 'bold', color: '#0F172A' },
-  subHeading: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  audioBanner: { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 12, padding: 14, marginBottom: 16 },
+  mainHeading: { fontSize: 26, fontWeight: '800', color: '#0F172A', letterSpacing: -0.4 },
+  subHeading: { fontSize: 14, color: '#64748B', marginTop: 4, lineHeight: 20 },
+  audioBanner: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
   audioBannerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  audioBannerTitle: { fontSize: 14, fontWeight: 'bold', color: '#1E3A8A' },
-  audioBannerSubtitle: { fontSize: 12, color: '#3B82F6', marginTop: 2, maxWidth: '85%' },
-  mvpBadge: { backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  mvpBadgeText: { fontSize: 10, fontWeight: 'bold', color: '#1D4ED8' },
-  audioBannerAction: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: '#2563EB', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignSelf: 'flex-start' },
-  micIconContainer: { width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-  audioBannerActionText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  audioBannerTags: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  tagItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  tagText: { fontSize: 11, fontWeight: '500', color: '#2563EB' },
-  stepsContainer: { flexDirection: 'row', backgroundColor: '#E2E8F0', borderRadius: 8, padding: 3, marginBottom: 16 },
-  stepInactive: { flex: 1, paddingVertical: 6, alignItems: 'center' },
-  stepTextInactive: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  stepActive: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 6 },
-  stepActiveSelected: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1, elevation: 2 },
-  stepTextActive: { fontSize: 12, color: '#0F172A', fontWeight: '600' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' },
-  cardTitle: { fontSize: 14, fontWeight: '600', color: '#1E293B', marginBottom: 10 },
-  dropdownField: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10 },
-  dropdownLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  fieldLabelSmall: { fontSize: 10, color: '#64748B', fontWeight: '500', marginBottom: 4 },
-  fieldValue: { fontSize: 13, fontWeight: '600', color: '#0F172A' },
-  idInput: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A' },
-  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  gridItem: { width: '31%', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', minHeight: 74 },
+  audioBannerTitle: { fontSize: 15, fontWeight: '700', color: '#1E3A8A' },
+  audioBannerSubtitle: { fontSize: 13, color: '#2563EB', marginTop: 3, lineHeight: 18 },
+  mvpBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  mvpBadgeText: { fontSize: 11, fontWeight: '700', color: '#1D4ED8' },
+  audioBannerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    backgroundColor: '#2563EB',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  micIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  audioBannerActionText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  audioBannerTags: { flexDirection: 'row', gap: 14, marginTop: 12 },
+  tagItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tagText: { fontSize: 12, fontWeight: '600', color: '#2563EB' },
+  stepsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 16,
+  },
+  stepTab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 9 },
+  stepTabSelected: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  stepText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  stepTextSelected: { color: '#0F172A', fontWeight: '700' },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardActive: {
+    borderColor: '#93C5FD',
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 12 },
+  dropdownField: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
+  },
+  dropdownLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  fieldLabelSmall: { fontSize: 11, color: '#64748B', fontWeight: '600', marginBottom: 4 },
+  fieldValue: { fontSize: 14, fontWeight: '600', color: '#0F172A' },
+  idInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  gridItem: {
+    width: '31.5%',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 80,
+  },
   gridItemSelected: { backgroundColor: '#EFF6FF', borderColor: '#2563EB' },
   gridItemAlertSelected: { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
-  gridItemText: { fontSize: 11, color: '#475569', textAlign: 'center', marginTop: 6, fontWeight: '500' },
-  gridItemTextSelected: { color: '#1E3A8A', fontWeight: '600' },
-  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' },
-  chipActive: { backgroundColor: '#EFF6FF', borderColor: '#93C5FD' },
-  chipText: { fontSize: 12, color: '#475569' },
-  chipTextActive: { color: '#1D4ED8', fontWeight: '600' },
-  textArea: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A', textAlignVertical: 'top', height: 70 },
-  saveButton: { backgroundColor: '#2563EB', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  saveButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.4)', justifyContent: 'center', padding: 24 },
-  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16 },
-  modalTitle: { fontSize: 15, fontWeight: 'bold', color: '#0F172A', marginBottom: 12 },
+  gridItemText: { fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 6, fontWeight: '500' },
+  gridItemTextSelected: { color: '#1E3A8A', fontWeight: '700' },
+  chipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  chipActive: { backgroundColor: '#EFF6FF', borderColor: '#2563EB' },
+  chipText: { fontSize: 12, color: '#475569', fontWeight: '500' },
+  chipTextActive: { color: '#1D4ED8', fontWeight: '700' },
+  textArea: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: '#0F172A',
+    textAlignVertical: 'top',
+    minHeight: 84,
+  },
+  saveButton: {
+    backgroundColor: '#2563EB',
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  saveButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18 },
+  modalTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 12 },
   modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  modalOptionText: { fontSize: 14, color: '#1E293B' },
+  modalOptionText: { fontSize: 14, color: '#0F172A' },
 });
