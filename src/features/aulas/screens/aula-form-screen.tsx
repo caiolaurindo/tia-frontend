@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { Alert, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { Badge, Button, Card, Icon, TextField } from "@/components/ui";
@@ -46,7 +54,7 @@ export function AulaFormScreen() {
     isSaving,
     saveLesson,
     removeLesson,
-  } = useLessonForm(existingLesson, params.turmaId);
+  } = useLessonForm(existingLesson, params.turmaId, conquistas);
 
   const activeConquistas = conquistas.filter((c) => c.ativa);
 
@@ -252,11 +260,12 @@ export function AulaFormScreen() {
 
         <View style={styles.achievementsList}>
           {activeConquistas.map((conquista) => {
-            const isSelected = selectedAchievements.includes(conquista.nome);
+            const isSelected = selectedAchievements.includes(conquista.id);
+
             return (
               <Pressable
                 key={conquista.id}
-                onPress={() => toggleAchievement(conquista.nome)}
+                onPress={() => toggleAchievement(conquista.id)}
                 style={[
                   styles.achievementItem,
                   isSelected && styles.achievementItemSelected,
