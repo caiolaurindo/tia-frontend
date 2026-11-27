@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,13 +10,17 @@ import {
 } from "react-native";
 import { Button, Icon, TextField } from "@/components/ui";
 import { useTurmasContext } from "@/features/turmas/context/turmas-context";
-import { colors, radii, spacing } from "@/theme";
+import { colors, radii, spacing, typography } from "@/theme";
 import {
   AlunoItem,
   AlunoStatus,
   SaveAlunoInput,
 } from "../types/alunos.types";
-import { brParaIso, isoParaBr } from "../utils/aluno-mappers";
+import {
+  aplicarMascaraData,
+  brParaIso,
+  isoParaBr,
+} from "../utils/aluno-mappers";
 
 const STATUS_OPTIONS: { value: AlunoStatus; label: string }[] = [
   { value: "no_ritmo", label: "No ritmo" },
@@ -169,23 +174,60 @@ export function AlunoFormModal({
               )}
             </View>
 
-            <View style={styles.row}>
+            {Platform.OS === "web" ? (
+              <View style={styles.dateWrapper}>
+                <Text style={styles.dateLabel}>Data de nascimento</Text>
+                <View style={styles.webDateContainer}>
+                  <Icon
+                    name="calendar"
+                    size={20}
+                    color={colors.icon.default}
+                    style={styles.webDateIcon}
+                  />
+                  {React.createElement("input", {
+                    type: "date",
+                    value: brParaIso(birthText) ?? "",
+                    max: new Date().toISOString().slice(0, 10),
+                    onChange: (e: { target: { value: string } }) => {
+                      const iso = e.target.value;
+                      setBirthText(iso ? isoParaBr(iso) : "");
+                      if (error) setError(null);
+                    },
+                    style: {
+                      flex: 1,
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      outline: "none",
+                      backgroundColor: "transparent",
+                      color: colors.text.primary,
+                      fontSize: typography.input.fontSize,
+                      fontFamily: "inherit",
+                    },
+                  })}
+                </View>
+              </View>
+            ) : (
               <TextField
-                label="Nascimento"
+                label="Data de nascimento"
+                leftIcon="calendar"
                 placeholder="DD/MM/AAAA"
                 keyboardType="numeric"
+                maxLength={10}
                 value={birthText}
-                onChangeText={setBirthText}
-                containerStyle={styles.dateField}
+                onChangeText={(text) => {
+                  setBirthText(aplicarMascaraData(text));
+                  if (error) setError(null);
+                }}
               />
-              <TextField
-                label="Responsável"
-                placeholder="Ex.: Juliana Oliveira"
-                value={guardianName}
-                onChangeText={setGuardianName}
-                containerStyle={styles.flexField}
-              />
-            </View>
+            )}
+
+            <TextField
+              label="Responsável"
+              placeholder="Ex.: Juliana Oliveira"
+              value={guardianName}
+              onChangeText={setGuardianName}
+            />
 
             <View style={styles.statusSection}>
               <Text style={styles.statusLabel}>Situação</Text>
@@ -265,18 +307,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.xs,
   },
-  row: {
+  dateWrapper: {
+    width: "100%",
+  },
+  dateLabel: {
+    ...typography.label,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+  },
+  webDateContainer: {
     flexDirection: "row",
-    gap: spacing.sm,
+    alignItems: "center",
+    backgroundColor: colors.background.surface,
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    borderRadius: radii.xl,
+    height: 54,
+    paddingHorizontal: spacing.lg,
   },
-  flexField: {
-    flex: 1,
-  },
-  smallField: {
-    width: 96,
-  },
-  dateField: {
-    width: 140,
+  webDateIcon: {
+    marginRight: spacing.md,
   },
   errorText: {
     fontSize: 13,
