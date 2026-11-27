@@ -1,11 +1,6 @@
 import type { RegistroApi } from "@/services";
 import { AlunoEvent, AlunoEventType } from "../types/alunos.types";
 
-// O backend devolve a aula junto do registro, mas o tipo RegistroApi não a declara.
-type RegistroComAula = RegistroApi & {
-  aula?: { nome?: string; assunto?: string | null } | null;
-};
-
 const PREFIXO_CONQUISTA = "Conquista:";
 
 function dataCurta(iso: string): string {
@@ -16,7 +11,7 @@ function dataCurta(iso: string): string {
 export function registrosParaEventos(registros: RegistroApi[]): AlunoEvent[] {
   const eventos: AlunoEvent[] = [];
 
-  for (const registro of registros as RegistroComAula[]) {
+  for (const registro of registros) {
     const dateIso = String(registro.data ?? "").slice(0, 10);
     const dateLabel = dataCurta(dateIso);
     const aula = registro.aula?.nome ? ` (Aula: ${registro.aula.nome})` : "";
@@ -45,7 +40,18 @@ export function registrosParaEventos(registros: RegistroApi[]): AlunoEvent[] {
     adicionar("dificuldade", "dificuldade", "Dificuldade observada", registro.dificuldades);
 
     const livre = registro.observacoesLivres?.trim();
-    if (livre?.startsWith(PREFIXO_CONQUISTA)) {
+
+    if (registro.conquista?.nome) {
+      // Conquista estruturada: o nome vem do vínculo; o texto livre complementa.
+      const complemento = livre ? ` - ${livre}` : "";
+      adicionar(
+        "conquista",
+        "conquista",
+        "Conquista registrada",
+        `${registro.conquista.nome}${complemento}`
+      );
+    } else if (livre?.startsWith(PREFIXO_CONQUISTA)) {
+      // Registros antigos, gravados como texto.
       adicionar(
         "conquista",
         "conquista",
