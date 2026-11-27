@@ -116,8 +116,8 @@ export function NovoRegistroScreen() {
   const [alunos, setAlunos] = useState<AlunoItem[]>([]);
   const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoItem | null>(null);
 
-  const [alunoIdManual, setAlunoIdManual] = useState('1');
-  const [aulaIdManual, setAulaIdManual] = useState('1');
+  const [alunoIdManual, setAlunoIdManual] = useState(params.alunoId ?? '');
+  const [aulaIdManual, setAulaIdManual] = useState('');
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [modalAulaVisivel, setModalAulaVisivel] = useState(false);
@@ -217,16 +217,18 @@ export function NovoRegistroScreen() {
     const handleSalvar = async () => {
     if (salvando) return;
 
-    const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
+        const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
     const aulaIdFinal = aulaSelecionada?.id ?? Number(aulaIdManual);
 
-    if (
-      !Number.isInteger(alunoIdFinal) ||
-      alunoIdFinal <= 0 ||
-      !Number.isInteger(aulaIdFinal) ||
-      aulaIdFinal <= 0
-    ) {
-      avisar('Atenção', 'Selecione um aluno e uma aula válidos antes de salvar.');
+    if (!Number.isInteger(alunoIdFinal) || alunoIdFinal <= 0) {
+      avisar('Atenção', 'Selecione um aluno antes de salvar.');
+      return;
+    }
+    if (!Number.isInteger(aulaIdFinal) || aulaIdFinal <= 0) {
+      avisar(
+        'Atenção',
+        'Selecione uma aula antes de salvar. Se a turma não tem aulas, cadastre uma na tela de Aulas.'
+      );
       return;
     }
 
@@ -434,7 +436,13 @@ export function NovoRegistroScreen() {
                   </View>
                   <Ionicons name="chevron-down" size={18} color="#64748B" />
                 </TouchableOpacity>
-              ) : (
+              ) : params.turmaId ? (
+                <Text style={[styles.fieldLabelSmall, { marginTop: 12 }]}>
+                  A turma deste aluno ainda não tem aulas. Cadastre uma aula na
+                  tela de Aulas antes de registrar.
+                </Text>
+              ) :
+               (
                 <View style={{ marginTop: 12 }}>
                   <Text style={styles.fieldLabelSmall}>ID DA AULA</Text>
                   <TextInput
