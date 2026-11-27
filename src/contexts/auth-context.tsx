@@ -25,6 +25,8 @@ interface AuthContextValue {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** true enquanto a sessão salva ainda está sendo recuperada ao abrir o app. */
+  isRestoringSession: boolean;
   signIn: (payload: LoginPayload) => Promise<void>;
   signUp: (payload: RegisterPayload) => Promise<void>;
   signOut: () => Promise<void>;
@@ -37,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ProfessorUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
 
   // Recupera a sessão quando o aplicativo é iniciado.
   useEffect(() => {
@@ -82,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         if (ativo) {
           setIsLoading(false);
+          setIsRestoringSession(false);
         }
       }
     }
@@ -154,12 +158,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       isAuthenticated: Boolean(token),
       isLoading,
+      isRestoringSession,
       signIn,
       signUp,
       signOut,
       updateProfile,
     }),
-    [user, token, isLoading, signIn, signUp, signOut, updateProfile]
+    [user, token, isLoading, isRestoringSession, signIn, signUp, signOut, updateProfile]
   );
 
   return (
