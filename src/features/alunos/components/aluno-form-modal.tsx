@@ -15,7 +15,7 @@ import {
   AlunoStatus,
   SaveAlunoInput,
 } from "../types/alunos.types";
-import { brParaIso, isoParaBr } from "../utils/aluno-mappers";
+import { brParaIso, isoParaBr, mascararDataBr } from "../utils/aluno-mappers";
 
 const STATUS_OPTIONS: { value: AlunoStatus; label: string }[] = [
   { value: "no_ritmo", label: "No ritmo" },
@@ -174,8 +174,9 @@ export function AlunoFormModal({
                 label="Nascimento"
                 placeholder="DD/MM/AAAA"
                 keyboardType="numeric"
+                maxLength={10}
                 value={birthText}
-                onChangeText={setBirthText}
+                onChangeText={(texto) => setBirthText(mascararDataBr(texto))}
                 containerStyle={styles.dateField}
               />
               <TextField
