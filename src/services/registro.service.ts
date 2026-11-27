@@ -3,18 +3,22 @@ import { api } from "./api";
 export interface RegistroApi {
   id: number;
   alunoId: number;
-  aulaId: number;
+  aulaId?: number | null;
+  conquistaId?: number | null;
   data: string;
   participacao?: string | null;
   realizouAtividade?: string | null;
   seguiuComandos?: string | null;
   dificuldades?: string | null;
   observacoesLivres?: string | null;
+  aula?: { id: number; nome?: string; assunto?: string | null } | null;
+  conquista?: { id: number; nome: string } | null;
 }
 
 export interface RegistroPayload {
   alunoId: number;
-  aulaId: number;
+  aulaId?: number | null;
+  conquistaId?: number | null;
   data: string;
   participacao?: string | null;
   realizouAtividade?: string | null;
