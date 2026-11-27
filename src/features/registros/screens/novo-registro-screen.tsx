@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -38,6 +39,14 @@ function formatarDataISO(date = new Date()): string {
   const mes = String(date.getMonth() + 1).padStart(2, '0');
   const dia = String(date.getDate()).padStart(2, '0');
   return `${ano}-${mes}-${dia}`;
+}
+
+function avisar(titulo: string, mensagem: string) {
+  if (Platform.OS === 'web') {
+    window.alert(`${titulo}\n${mensagem}`);
+  } else {
+    Alert.alert(titulo, mensagem);
+  }
 }
 
 function montarPayloadRegistro(params: {
@@ -92,7 +101,7 @@ function montarPayloadRegistro(params: {
 
 export function NovoRegistroScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ alunoId?: string; aulaId?: string }>();
+    const params = useLocalSearchParams<{ alunoId?: string; aulaId?: string; turmaId?: string }>();
 
   const scrollViewRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const posicoesSecoes = useRef<Record<EtapaRegistro, number>>({
@@ -131,16 +140,16 @@ export function NovoRegistroScreen() {
 
         if (!ativo) return;
 
-        const listaAulas = resAulas.status === 'fulfilled' ? resAulas.value : [];
+        const todasAulas = resAulas.status === 'fulfilled' ? resAulas.value : [];
+        // Só aulas da turma do aluno escolhido (o backend exige a mesma turma).
+        const turmaDoAluno = params.turmaId;
+        const listaAulas = turmaDoAluno
+          ? todasAulas.filter((a) => {
+              const t = a.turmaId ?? a.turma?.id;
+              return t === undefined || String(t) === turmaDoAluno;
+            })
+          : todasAulas;
         setAulas(listaAulas);
-
-        const aulaParamId = Number(params.aulaId);
-        const aulaInicial =
-          listaAulas.find((a) => a.id === aulaParamId) ?? listaAulas[0] ?? null;
-        setAulaSelecionada(aulaInicial);
-        if (aulaInicial?.id) {
-          setAulaIdManual(String(aulaInicial.id));
-        }
 
         const listaAlunos: AlunoItem[] =
           resAlunos.status === 'fulfilled' && Array.isArray(resAlunos.value)
@@ -164,7 +173,7 @@ export function NovoRegistroScreen() {
     return () => {
       ativo = false;
     };
-  }, [params.alunoId, params.aulaId]);
+   }, [params.alunoId, params.aulaId, params.turmaId]);
 
   const irParaEtapa = (etapa: EtapaRegistro) => {
     setEtapaAtiva(etapa);
@@ -205,7 +214,7 @@ export function NovoRegistroScreen() {
     }
   };
 
-  const handleSalvar = async () => {
+    const handleSalvar = async () => {
     if (salvando) return;
 
     const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
@@ -217,7 +226,7 @@ export function NovoRegistroScreen() {
       !Number.isInteger(aulaIdFinal) ||
       aulaIdFinal <= 0
     ) {
-      Alert.alert('Atenção', 'Selecione um aluno e uma aula válidos antes de salvar.');
+      avisar('Atenção', 'Selecione um aluno e uma aula válidos antes de salvar.');
       return;
     }
 
@@ -239,15 +248,19 @@ export function NovoRegistroScreen() {
 
       await registroService.criar(payload);
 
-      Alert.alert('Sucesso', 'Registro salvo com sucesso!', [
-        { text: 'OK', onPress: () => router.replace(ROTA_DASHBOARD) },
-      ]);
+      if (Platform.OS === 'web') {
+        router.back();
+      } else {
+        Alert.alert('Sucesso', 'Registro salvo com sucesso!', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
       const mensagem =
         error instanceof ApiError
           ? error.message
           : 'Não foi possível salvar o registro. Tente novamente.';
-      Alert.alert('Erro ao salvar', mensagem);
+      avisar('Erro ao salvar', mensagem);
     } finally {
       setSalvando(false);
     }

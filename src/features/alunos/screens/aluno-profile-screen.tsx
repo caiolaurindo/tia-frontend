@@ -20,6 +20,7 @@ import {
   AlunoEventType,
   AlunoProfileTab,
 } from "../types/alunos.types";
+import { useAlunoRegistros } from "../hooks/use-aluno-registros";
 
 const PROFILE_TABS: { key: AlunoProfileTab; label: string }[] = [
   { key: "visao_geral", label: "Visão geral" },
@@ -46,6 +47,17 @@ const EVENT_ICON_STYLE: Record<
     bg: colors.tags.green.bg,
     color: colors.tags.green.text,
   },
+    dificuldade: {
+    icon: "list",
+    bg: colors.tags.rose.bg,
+    color: colors.tags.rose.text,
+  },
+  observacao: {
+    icon: "list",
+    bg: colors.tags.slate.bg,
+    color: colors.tags.slate.text,
+  },
+
 };
 
 const STATUS_OPTIONS: { value: StatusConquistaApi; label: string }[] = [
@@ -60,16 +72,33 @@ export function AlunoProfileScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { getAlunoById, updateAluno } = useAlunosContext();
 
-  const alunoBase = getAlunoById(id);
-  const { events, skills, achievementsCount, itens, salvarStatus } =
-    useAlunoConquistas(alunoBase?.id, alunoBase?.turmaId);
+    const alunoBase = getAlunoById(id);
+  const {
+    events: conquistaEvents,
+    skills,
+    achievementsCount,
+    itens,
+    salvarStatus,
+  } = useAlunoConquistas(alunoBase?.id, alunoBase?.turmaId);
+  const { events: registroEvents, recordsCount } = useAlunoRegistros(
+    alunoBase?.id
+  );
   const [savingId, setSavingId] = useState<number | null>(null);
+
+  const events = useMemo(
+    () =>
+      [...registroEvents, ...conquistaEvents].sort((a, b) =>
+        (b.dateIso ?? "").localeCompare(a.dateIso ?? "")
+      ),
+    [registroEvents, conquistaEvents]
+  );
+
   const aluno = useMemo(
     () =>
       alunoBase
-        ? { ...alunoBase, events, skills, achievementsCount }
+        ? { ...alunoBase, events, skills, achievementsCount, recordsCount }
         : undefined,
-    [alunoBase, events, skills, achievementsCount]
+    [alunoBase, events, skills, achievementsCount, recordsCount]
   );
 
   const [activeTab, setActiveTab] = useState<AlunoProfileTab>("visao_geral");
@@ -159,8 +188,13 @@ export function AlunoProfileScreen() {
             <Text style={styles.editButtonText}>Editar</Text>
           </Pressable>
 
-          <Pressable
-            onPress={() => router.push("/registros/novo")}
+                    <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/registros/novo",
+                params: { alunoId: aluno.id, turmaId: aluno.turmaId },
+              })
+            }
             style={styles.newRecordButton}
           >
             <Icon name="plus" size={16} color={colors.text.inverse} />
@@ -323,6 +357,8 @@ export function AlunoProfileScreen() {
                 { key: "conquista", label: "Conquistas" },
                 { key: "participacao", label: "Participação" },
                 { key: "atividade", label: "Atividades" },
+                { key: "dificuldade", label: "Dificuldades" },
+                { key: "observacao", label: "Observações" },
               ] as const
             ).map((opt) => {
               const selected = historyFilter === opt.key;
