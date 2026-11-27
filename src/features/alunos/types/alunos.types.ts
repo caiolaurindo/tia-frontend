@@ -6,7 +6,12 @@ export type AlunoFilterKey = "todos" | "destaques" | "atencao";
 
 export type AlunoProfileTab = "visao_geral" | "historico" | "evolucao";
 
-export type AlunoEventType = "conquista" | "participacao" | "atividade";
+export type AlunoEventType =
+  | "conquista"
+  | "participacao"
+  | "atividade"
+  | "dificuldade"
+  | "observacao";
 
 export interface AlunoEvent {
   id: string;
@@ -14,6 +19,7 @@ export interface AlunoEvent {
   title: string;
   description: string;
   dateLabel: string;
+  dateIso?: string;
 }
 
 export interface AlunoSkillProgress {

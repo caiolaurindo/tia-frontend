@@ -138,6 +138,7 @@ export function conquistasParaPerfil(lista: AlunoConquistaApi[]): {
       title: "Conquista alcançada",
       description: c.conquista?.nome ?? "",
       dateLabel: dataCurta(c.dataConquista),
+      dateIso: String(c.dataConquista ?? "").slice(0, 10),
     }));
 
   return { skills, events, achievementsCount: conquistadas.length };
