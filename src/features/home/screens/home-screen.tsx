@@ -2,52 +2,22 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Href, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
-import { AvatarInitials, Card, Icon, IconName } from "@/components/ui";
+import { AvatarInitials, Card, Icon } from "@/components/ui";
 import { useAuth } from "@/contexts";
 import { useAlunosContext } from "@/features/alunos";
 import { useAulasContext } from "@/features/aulas";
+import { useConquistasContext } from "@/features/conquistas";
 import { useTurmasContext } from "@/features/turmas";
 import { colors, radii, spacing } from "@/theme";
-
-interface RecentRecordItem {
-  id: string;
-  icon: IconName;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  description: string;
-  timeLabel: string;
-}
-
-const RECENT_RECORDS: RecentRecordItem[] = [
-  {
-    id: "rec-1",
-    icon: "trophy",
-    iconBg: colors.tags.amber.bg,
-    iconColor: colors.tags.amber.text,
-    title: "Conquista de Marina",
-    description: "Usou 'can' e 'can't' com autonomia.",
-    timeLabel: "09:42",
-  },
-  {
-    id: "rec-2",
-    icon: "hand",
-    iconBg: colors.brand.primaryLight,
-    iconColor: colors.brand.primary,
-    title: "João participou",
-    description: "Contribuiu na prática oral em dupla.",
-    timeLabel: "09:36",
-  },
-];
-
 export function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { turmas } = useTurmasContext();
   const { alunos } = useAlunosContext();
   const { lessons } = useAulasContext();
+  const { conquistas } = useConquistasContext();
 
-  const firstName = user?.nome?.trim().split(/\s+/)[0] || "Carolina";
+  const firstName = user?.nome?.trim().split(/\s+/)[0] || "Professor";
   const nextLesson = lessons[0];
 
   return (
@@ -81,18 +51,6 @@ export function HomeScreen() {
             />
           </Pressable>
         </View>
-
-        <Pressable
-          onPress={() => router.push("/registros/novo")}
-          style={({ pressed }) => [
-            styles.registerButton,
-            pressed && styles.registerButtonPressed,
-          ]}
-          accessibilityRole="button"
-        >
-          <Icon name="plus" size={18} color={colors.text.inverse} />
-          <Text style={styles.registerButtonText}>Registrar</Text>
-        </Pressable>
       </View>
 
       <View style={styles.kpiRow}>
@@ -137,6 +95,48 @@ export function HomeScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.kpiRow}>
+        <Pressable
+          onPress={() => router.push("/aulas")}
+          style={styles.kpiPressable}
+        >
+          <Card style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>AULAS</Text>
+              <View
+                style={[
+                  styles.kpiIconBox,
+                  { backgroundColor: colors.tags.amber.bg },
+                ]}
+              >
+                <Icon name="calendar" size={16} color={colors.tags.amber.text} />
+              </View>
+            </View>
+            <Text style={styles.kpiValue}>{lessons.length}</Text>
+          </Card>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/conquistas" as Href)}
+          style={styles.kpiPressable}
+        >
+          <Card style={styles.kpiCard}>
+            <View style={styles.kpiHeader}>
+              <Text style={styles.kpiLabel}>CONQUISTAS</Text>
+              <View
+                style={[
+                  styles.kpiIconBox,
+                  { backgroundColor: colors.tags.amber.bg },
+                ]}
+              >
+                <Icon name="trophy" size={16} color={colors.tags.amber.text} />
+              </View>
+            </View>
+            <Text style={styles.kpiValue}>{conquistas.length}</Text>
+          </Card>
+        </Pressable>
+      </View>
+
       <Card style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Próximas aulas</Text>
@@ -145,43 +145,44 @@ export function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.nextLessonBox}>
-          <View style={styles.nextLessonTimeCol}>
-            <Text style={styles.nextLessonTime}>
-              {nextLesson?.startTime ?? "10:30"}
-            </Text>
-            <Text style={styles.nextLessonDay}>HOJE</Text>
-          </View>
+        {nextLesson ? (
+          <View style={styles.nextLessonBox}>
+            <View style={styles.nextLessonTimeCol}>
+              <Text style={styles.nextLessonTime}>
+                {nextLesson.startTime}
+              </Text>
+              <Text style={styles.nextLessonDay}>HOJE</Text>
+            </View>
 
-          <View style={styles.nextLessonInfo}>
-            <Text style={styles.nextLessonTitle} numberOfLines={2}>
-              {nextLesson
-                ? `${nextLesson.classGroup} · ${nextLesson.grade}`
-                : "English Explorers · 6º A"}
-            </Text>
-            <Text style={styles.nextLessonMeta} numberOfLines={1}>
-              {nextLesson
-                ? `${nextLesson.title} · ${nextLesson.totalStudentsCount} alunos`
-                : "Daily routines · 22 alunos"}
-            </Text>
-          </View>
+            <View style={styles.nextLessonInfo}>
+              <Text style={styles.nextLessonTitle} numberOfLines={2}>
+                {nextLesson.classGroup} · {nextLesson.grade}
+              </Text>
+              <Text style={styles.nextLessonMeta} numberOfLines={1}>
+                {nextLesson.title} · {nextLesson.totalStudentsCount} alunos
+              </Text>
+            </View>
 
-          <Pressable
-            onPress={() => {
-              if (nextLesson) {
+            <Pressable
+              onPress={() =>
                 router.push({
                   pathname: "/aulas/[id]/acompanhamento",
                   params: { id: nextLesson.id },
-                });
-              } else {
-                router.push("/aulas");
+                })
               }
-            }}
-            style={styles.followButton}
-          >
-            <Text style={styles.followButtonText}>Acompanhar</Text>
-          </Pressable>
-        </View>
+              style={styles.followButton}
+            >
+              <Text style={styles.followButtonText}>Acompanhar</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.emptyStateBox}>
+            <Icon name="calendar" size={24} color={colors.text.placeholder} />
+            <Text style={styles.emptyStateText}>
+              Nenhuma aula programada para hoje.
+            </Text>
+          </View>
+        )}
       </Card>
 
       <Card style={styles.sectionCard}>
@@ -192,35 +193,11 @@ export function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.timeline}>
-          {RECENT_RECORDS.map((item, index) => {
-            const isLast = index === RECENT_RECORDS.length - 1;
-            return (
-              <View key={item.id} style={styles.timelineRow}>
-                <View style={styles.timelineLeft}>
-                  <View
-                    style={[
-                      styles.timelineIconCircle,
-                      { backgroundColor: item.iconBg },
-                    ]}
-                  >
-                    <Icon name={item.icon} size={16} color={item.iconColor} />
-                  </View>
-                  {!isLast ? <View style={styles.timelineLine} /> : null}
-                </View>
-
-                <View style={styles.timelineContent}>
-                  <View style={styles.timelineTitleRow}>
-                    <Text style={styles.timelineTitle}>{item.title}</Text>
-                    <Text style={styles.timelineTime}>{item.timeLabel}</Text>
-                  </View>
-                  <Text style={styles.timelineDescription}>
-                    {item.description}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
+        <View style={styles.emptyStateBox}>
+          <Icon name="list" size={24} color={colors.text.placeholder} />
+          <Text style={styles.emptyStateText}>
+            Nenhum registro recente encontrado.
+          </Text>
         </View>
       </Card>
     </AppShell>
@@ -261,25 +238,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.text.secondary,
-  },
-  registerButton: {
-    marginTop: spacing.sm,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.brand.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: radii.full,
-  },
-  registerButtonPressed: {
-    backgroundColor: colors.brand.primaryPressed,
-  },
-  registerButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: colors.text.inverse,
   },
   kpiRow: {
     flexDirection: "row",
@@ -379,55 +337,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.text.inverse,
   },
-  timeline: {
-    gap: spacing.xs,
-  },
-  timelineRow: {
-    flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 58,
-  },
-  timelineLeft: {
-    alignItems: "center",
-    width: 36,
-  },
-  timelineIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.lg,
+  emptyStateBox: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: colors.border.subtle,
-    marginVertical: 4,
-  },
-  timelineContent: {
-    flex: 1,
-    paddingBottom: spacing.sm,
-    gap: 2,
-  },
-  timelineTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    paddingVertical: spacing.lg,
     gap: spacing.sm,
   },
-  timelineTitle: {
+  emptyStateText: {
     fontSize: 14,
-    fontWeight: "700",
-    color: colors.text.primary,
-    flex: 1,
-  },
-  timelineTime: {
-    fontSize: 12,
     color: colors.text.placeholder,
-  },
-  timelineDescription: {
-    fontSize: 13,
-    color: colors.text.secondary,
-    lineHeight: 18,
+    textAlign: "center",
   },
 });

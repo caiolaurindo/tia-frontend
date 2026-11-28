@@ -19,7 +19,7 @@ import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CategoriaRegistro, DetalheRapido } from '../types/registros.types';
 import { ApiError } from '@/services/api';
-import { alunoService } from '@/services/aluno.service';
+import { alunoService, turmaConquistaService } from '@/services/aluno.service';
 import { AulaApi, aulaService } from '@/services/aula.service';
 import { RegistroPayload, registroService } from '@/services/registro.service';
 
@@ -33,6 +33,8 @@ type AlunoItem = {
   turmaId?: number;
   turma_id?: number;
 };
+
+type ConquistaTurmaItem = { conquistaId: number; nome: string };
 
 function formatarDataISO(date = new Date()): string {
   const ano = date.getFullYear();
@@ -51,7 +53,8 @@ function avisar(titulo: string, mensagem: string) {
 
 function montarPayloadRegistro(params: {
   alunoId: number;
-  aulaId: number;
+  aulaId?: number | null;
+  conquistaId?: number | null;
   data?: string;
   categoria: CategoriaRegistro;
   detalhes: DetalheRapido[];
@@ -71,9 +74,9 @@ function montarPayloadRegistro(params: {
 
   const payload: RegistroPayload = {
     alunoId: params.alunoId,
-    aulaId: params.aulaId,
     data: params.data ?? formatarDataISO(),
   };
+  if (params.aulaId) payload.aulaId = params.aulaId;
 
   switch (params.categoria) {
     case 'participou':
@@ -89,7 +92,13 @@ function montarPayloadRegistro(params: {
       payload.dificuldades = textoComposto;
       break;
     case 'conquista':
-      payload.observacoesLivres = `Conquista: ${textoComposto}`;
+      if (params.conquistaId) {
+        // Conquista estruturada: sem o prefixo "Conquista:".
+        payload.conquistaId = params.conquistaId;
+        payload.observacoesLivres = textoLivre;
+      } else {
+        payload.observacoesLivres = `Conquista: ${textoComposto}`;
+      }
       break;
     case 'observacao_livre':
       payload.observacoesLivres = textoLivre;
@@ -115,6 +124,9 @@ export function NovoRegistroScreen() {
   const [aulaSelecionada, setAulaSelecionada] = useState<AulaApi | null>(null);
   const [alunos, setAlunos] = useState<AlunoItem[]>([]);
   const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoItem | null>(null);
+  const [conquistasTurma, setConquistasTurma] = useState<ConquistaTurmaItem[]>([]);
+  const [conquistaSelecionada, setConquistaSelecionada] = useState<ConquistaTurmaItem | null>(null);
+  const [modalConquistaVisivel, setModalConquistaVisivel] = useState(false);
 
   const [alunoIdManual, setAlunoIdManual] = useState(params.alunoId ?? '');
   const [aulaIdManual, setAulaIdManual] = useState('');
@@ -175,6 +187,39 @@ export function NovoRegistroScreen() {
     };
    }, [params.alunoId, params.aulaId, params.turmaId]);
 
+       useEffect(() => {
+    const turmaDoAluno =
+      params.turmaId ??
+      (alunoSelecionado?.turmaId ?? alunoSelecionado?.turma_id)?.toString();
+
+    // Troca de aluno/turma: limpa a conquista escolhida antes de carregar a nova lista.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConquistaSelecionada(null);
+    if (!turmaDoAluno) {
+      setConquistasTurma([]);
+      return;
+    }
+
+    let ativo = true;
+    turmaConquistaService
+      .listarPorTurma(turmaDoAluno)
+      .then((lista) => {
+        if (!ativo) return;
+        setConquistasTurma(
+          lista.map((v) => ({
+            conquistaId: v.conquistaId,
+            nome: v.conquista?.nome ?? `Conquista ${v.conquistaId}`,
+          }))
+        );
+      })
+      .catch(() => {
+        if (ativo) setConquistasTurma([]);
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [params.turmaId, alunoSelecionado]);
+
   const irParaEtapa = (etapa: EtapaRegistro) => {
     setEtapaAtiva(etapa);
     const destinoY = Math.max(0, posicoesSecoes.current[etapa] - 12);
@@ -194,9 +239,9 @@ export function NovoRegistroScreen() {
     }
   };
 
-  const handleSelecionarAula = (aula: AulaApi) => {
+    const handleSelecionarAula = (aula: AulaApi | null) => {
     setAulaSelecionada(aula);
-    setAulaIdManual(String(aula.id));
+    setAulaIdManual(aula ? String(aula.id) : '');
     setModalAulaVisivel(false);
   };
 
@@ -214,27 +259,22 @@ export function NovoRegistroScreen() {
     }
   };
 
-    const handleSalvar = async () => {
+      const handleSalvar = async () => {
     if (salvando) return;
 
-        const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
-    const aulaIdFinal = aulaSelecionada?.id ?? Number(aulaIdManual);
+    const alunoIdFinal = alunoSelecionado?.id ?? Number(alunoIdManual);
 
     if (!Number.isInteger(alunoIdFinal) || alunoIdFinal <= 0) {
       avisar('Atenção', 'Selecione um aluno antes de salvar.');
       return;
     }
-    if (!Number.isInteger(aulaIdFinal) || aulaIdFinal <= 0) {
-      avisar(
-        'Atenção',
-        'Selecione uma aula antes de salvar. Se a turma não tem aulas, cadastre uma na tela de Aulas.'
-      );
-      return;
-    }
+
+    const aulaIdFinal = aulaSelecionada?.id ?? null;
 
     try {
       setSalvando(true);
 
+      // Com aula, usa a data dela; sem aula, a data de hoje.
       const dataRegistro = aulaSelecionada?.data
         ? aulaSelecionada.data.slice(0, 10)
         : formatarDataISO();
@@ -242,6 +282,7 @@ export function NovoRegistroScreen() {
       const payload = montarPayloadRegistro({
         alunoId: alunoIdFinal,
         aulaId: aulaIdFinal,
+        conquistaId: conquistaSelecionada?.conquistaId ?? null,
         data: dataRegistro,
         categoria,
         detalhes: detalhesSelecionados,
@@ -387,23 +428,23 @@ export function NovoRegistroScreen() {
           ) : (
             <>
               {alunos.length > 0 ? (
-                <TouchableOpacity
-                  style={styles.dropdownField}
-                  onPress={() => setModalAlunoVisivel(true)}
-                >
-                  <View style={styles.dropdownLeft}>
-                    <Ionicons name="person-outline" size={20} color="#2563EB" />
-                    <View>
-                      <Text style={styles.fieldLabelSmall}>ALUNO</Text>
-                      <Text style={styles.fieldValue}>
-                        {alunoSelecionado
-                          ? `${alunoSelecionado.nome} (#${alunoSelecionado.id})`
-                          : 'Selecionar aluno'}
-                      </Text>
-                    </View>
+                              <TouchableOpacity
+                style={[styles.dropdownField, { marginTop: 12 }]}
+                onPress={() => setModalAulaVisivel(true)}
+              >
+                <View style={styles.dropdownLeft}>
+                  <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+                  <View>
+                    <Text style={styles.fieldLabelSmall}>AULA (OPCIONAL)</Text>
+                    <Text style={styles.fieldValue}>
+                      {aulaSelecionada
+                        ? `${aulaSelecionada.nome}${aulaSelecionada.assunto ? ` · ${aulaSelecionada.assunto}` : ''}`
+                        : 'Sem aula (data de hoje)'}
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-down" size={18} color="#64748B" />
-                </TouchableOpacity>
+                </View>
+                <Ionicons name="chevron-down" size={18} color="#64748B" />
+              </TouchableOpacity>
               ) : (
                 <View>
                   <Text style={styles.fieldLabelSmall}>ID DO ALUNO</Text>
@@ -506,7 +547,33 @@ export function NovoRegistroScreen() {
             })}
           </View>
         </View>
-
+                    {categoria === 'conquista' && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Qual conquista?</Text>
+            {conquistasTurma.length > 0 ? (
+              <TouchableOpacity
+                style={styles.dropdownField}
+                onPress={() => setModalConquistaVisivel(true)}
+              >
+                <View style={styles.dropdownLeft}>
+                  <Ionicons name="ribbon-outline" size={20} color="#2563EB" />
+                  <View>
+                    <Text style={styles.fieldLabelSmall}>CONQUISTA DA TURMA</Text>
+                    <Text style={styles.fieldValue}>
+                      {conquistaSelecionada?.nome ?? 'Selecionar conquista'}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-down" size={18} color="#64748B" />
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.fieldLabelSmall}>
+                A turma deste aluno não tem conquistas vinculadas. O registro será salvo
+                como texto.
+              </Text>
+            )}
+          </View>
+        )}
         <View
           style={[styles.card, etapaAtiva === 'detalhes' && styles.cardActive]}
           onLayout={(e) => {
@@ -595,6 +662,13 @@ export function NovoRegistroScreen() {
           activeOpacity={1}
           onPress={() => setModalAulaVisivel(false)}
         >
+                      <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => handleSelecionarAula(null)}
+              >
+                <Text style={styles.modalOptionText}>Sem aula (data de hoje)</Text>
+              </TouchableOpacity>
+
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Selecione a aula</Text>
             <ScrollView style={{ maxHeight: 280 }}>
@@ -608,6 +682,36 @@ export function NovoRegistroScreen() {
                     {aula.nome}
                     {aula.assunto ? ` · ${aula.assunto}` : ''}
                   </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+            <Modal
+        visible={modalConquistaVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalConquistaVisivel(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setModalConquistaVisivel(false)}
+        >
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecione a conquista</Text>
+            <ScrollView style={{ maxHeight: 280 }}>
+              {conquistasTurma.map((c) => (
+                <TouchableOpacity
+                  key={c.conquistaId}
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setConquistaSelecionada(c);
+                    setModalConquistaVisivel(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{c.nome}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

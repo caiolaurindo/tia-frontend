@@ -57,8 +57,8 @@ export function isoParaBr(iso: string): string {
   return ano && mes && dia ? `${dia}/${mes}/${ano}` : "";
 }
 
-/** Máscara DD/MM/AAAA: "10032015" -> "10/03/2015" (insere as barras ao digitar). */
-export function mascararDataBr(texto: string): string {
+/** Formata dígitos digitados no padrão DD/MM/AAAA. */
+export function aplicarMascaraData(texto: string): string {
   const digitos = texto.replace(/\D/g, "").slice(0, 8);
   if (digitos.length <= 2) return digitos;
   if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;

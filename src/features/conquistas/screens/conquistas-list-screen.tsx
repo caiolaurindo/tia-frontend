@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from "react";
 import { Alert, AlertButton, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { AppShell } from "@/components/layout";
 import { spacing } from "@/theme";
+import { ConquistaAlunosSheet } from "../components/conquista-alunos-sheet";
 import { ConquistaCard } from "../components/conquista-card";
 import { ConquistasEmptyState } from "../components/conquistas-empty-state";
 import { ConquistasFilters } from "../components/conquistas-filters";
@@ -57,6 +58,8 @@ export function ConquistasListScreen() {
   const [conquistaEmEdicao, setConquistaEmEdicao] = useState<Conquista | null>(
     null,
   );
+  const [conquistaSelecionada, setConquistaSelecionada] =
+    useState<Conquista | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -133,15 +136,8 @@ export function ConquistasListScreen() {
 };
 
   const handleAbrir = (conquista: Conquista) => {
-    // TODO: quando a tela de Registro (outro módulo) estiver pronta, navegar
-    // para ela passando a conquista e a turma selecionada
-    // (turma "todas" → escolher turma; turma específica → alunos da turma).
-    setToast({
-      message:
-        turma === TURMA_TODAS
-          ? `Abre as turmas de “${conquista.nome}”`
-          : `Abre os alunos da ${turmaNome}`,
-    });
+    if (!conquista.ativa) return;
+    setConquistaSelecionada(conquista);
   };
 
   const tituloSecao = mostrarArquivadas
@@ -210,6 +206,17 @@ export function ConquistasListScreen() {
         onClose={() => setSheetAberto(false)}
         onSave={handleSalvar}
         conquista={conquistaEmEdicao}
+      />
+
+      <ConquistaAlunosSheet
+        conquista={conquistaSelecionada}
+        turma={turma}
+        turmaNome={turmaNome}
+        onClose={() => setConquistaSelecionada(null)}
+        onSelectAluno={(aluno) => {
+          setConquistaSelecionada(null);
+          router.push(`/alunos/${aluno.id}` as Href);
+        }}
       />
     </AppShell>
   );

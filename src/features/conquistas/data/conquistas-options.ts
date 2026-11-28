@@ -24,6 +24,8 @@ export const FILTRO_CATEGORIAS: ConquistaCategoria[] = [
   "listening",
   "grammar",
   "vocabulary",
+  "reading",
+  "writing",
 ];
 
 // TODO: virá do backend (módulo de turmas).

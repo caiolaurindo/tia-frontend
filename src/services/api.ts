@@ -133,7 +133,9 @@ export async function apiRequest<T>(
         String(
           payloadObj.message ?? payloadObj.mensagem ?? payloadObj.error
         )) ||
-      `Erro na requisição (${response.status})`;
+      (response.status === 429
+        ? "Muitas requisições enviadas em sequência. Por favor, aguarde alguns minutos e tente novamente."
+        : `Erro na requisição (${response.status})`);
 
     throw new ApiError(message, response.status, payload);
   }
