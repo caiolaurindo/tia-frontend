@@ -1,25 +1,130 @@
-# TIA App
+# TIA App — Teaching Intelligent Assistant
 
 Aplicação multiplataforma para acompanhamento do desenvolvimento de alunos de inglês. O TIA ajuda professores a registrar acontecimentos das aulas, consultar o histórico individual dos estudantes e acompanhar conquistas de aprendizagem ao longo do ano letivo.
 
-## Como executar o projeto
+## 📚 Sobre o projeto
 
-Com o terminal aberto na pasta raiz `tia-project-pi4`, execute:
+O TIA é uma plataforma voltada para professores de inglês que trabalham com crianças de até 12 anos.
+
+A aplicação busca transformar observações do cotidiano escolar em informações organizadas e acessíveis, permitindo que o professor acompanhe o desenvolvimento individual dos estudantes ao longo do ano letivo.
+
+Entre as informações acompanhadas estão:
+
+- Participação;
+- Atividades realizadas;
+- Dificuldades;
+- Conquistas;
+- Comportamento;
+- Acontecimentos relevantes;
+- Evolução;
+- Desenvolvimento das habilidades esperadas.
+
+A ideia central do projeto é:
+
+**Registrar → Organizar → Consultar → Acompanhar**
+
+O objetivo é centralizar informações importantes sobre os estudantes e reduzir a dependência de registros espalhados ou da memória do professor.
+
+## 👥 Integrantes da equipe
+
+O projeto é desenvolvido pelos seguintes integrantes:
+
+| Integrante | Matrícula |
+|---|---|
+| Yasmin Marcelly Vasconcelos de Arruda | 00000859573 |
+| Adriano José Valença Gomes Filho | 00000860049 |
+| Hallysson Araújo Laurindo Silva | 00000859534 |
+| Josielly Rayssa Cruz Santos | 00000860060 |
+| Moisés Carlos de Araújo Neto | 00000859890 |
+| Caio Lucas Laurindo da Silva | 00000859629 |
+
+## 📱 Sobre a aplicação
+
+O TIA App é responsável pela interface e pela experiência de utilização da plataforma.
+
+A aplicação permite que os professores interajam com os recursos do sistema por meio de uma interface multiplataforma, desenvolvida com React Native e Expo.
+
+Entre as funcionalidades da aplicação estão:
+
+- Autenticação de professores;
+- Gerenciamento de turmas;
+- Cadastro e acompanhamento de alunos;
+- Planejamento e acompanhamento de aulas;
+- Gerenciamento de conquistas de aprendizagem;
+- Registro de acontecimentos e observações;
+- Consulta de informações relacionadas ao desenvolvimento dos estudantes.
+
+O frontend se comunica com o backend por meio de serviços e requisições HTTP, permitindo a integração e persistência das informações.
+
+## ⚙️ Tecnologias utilizadas
+
+O projeto utiliza as seguintes tecnologias:
+
+| Tecnologia | Finalidade |
+|---|---|
+| React Native | Desenvolvimento da interface multiplataforma |
+| Expo | Ambiente e ferramentas de desenvolvimento |
+| Expo Router | Gerenciamento de rotas e navegação |
+| TypeScript | Tipagem estática e segurança no desenvolvimento |
+| React | Construção de interfaces e componentes |
+| Context API | Gerenciamento de estados globais |
+| Fetch API | Comunicação com o backend |
+| AsyncStorage | Persistência local de informações de autenticação |
+
+## 🚀 Como executar o projeto
+
+Com o terminal aberto na pasta raiz do projeto, entre no diretório da aplicação:
 
 ```bash
 cd tia-app
+```
+
+Instale as dependências:
+
+```bash
 npm install
+```
+
+Inicie o servidor de desenvolvimento do Expo:
+
+```bash
 npm start
 ```
 
-O `npm install` instala as dependências em `node_modules`. O `npm start` inicia o servidor de desenvolvimento do Expo e exibe um QR Code e os atalhos para abrir a aplicação.
+O comando inicia o servidor de desenvolvimento e exibe um QR Code e os atalhos para abrir a aplicação.
+
+### Executando a aplicação
 
 Depois que o Expo iniciar, escolha onde executar:
 
-- **celular:** instale o Expo Go, mantenha o aparelho e o computador na mesma rede e leia o QR Code;
-- **Android:** pressione `a` no terminal ou execute `npm run android`;
-- **Web:** pressione `w` no terminal ou execute `npm run web`;
-- **iOS:** pressione `i` no macOS ou execute `npm run ios`.
+**Celular:**
+- Instale o Expo Go.
+- Mantenha o aparelho e o computador na mesma rede.
+- Leia o QR Code exibido no terminal.
+
+**Android:**
+
+Pressione `a` no terminal ou execute:
+
+```bash
+npm run android
+```
+
+**Web:**
+
+Pressione `w` no terminal ou execute:
+
+```bash
+npm run web
+```
+
+**iOS:**
+
+Pressione `i` no macOS ou execute:
+
+```bash
+npm run ios
+```
 
 Para uma instalação limpa e reproduzível, especialmente em integração contínua, substitua `npm install` por:
 
@@ -27,192 +132,344 @@ Para uma instalação limpa e reproduzível, especialmente em integração cont�
 npm ci
 ```
 
-### Pré-requisitos
+## 📋 Pré-requisitos
 
-- [Node.js](https://nodejs.org/) em uma versão LTS recente;
+Para executar o projeto, são necessários:
+
+- Node.js em uma versão compatível com as dependências do projeto;
 - npm, instalado junto com o Node.js;
 - Expo Go para executar em um celular físico;
-- Android Studio e Android SDK para usar um emulador Android;
-- macOS e Xcode para usar o simulador iOS;
-- um navegador moderno para executar a versão Web.
+- Android Studio e Android SDK para utilizar um emulador Android;
+- macOS e Xcode para utilizar o simulador iOS;
+- Navegador moderno para executar a versão Web.
 
-O projeto ainda não utiliza variáveis de ambiente nem exige configuração de serviços externos.
+## 🔗 Integração com o backend
 
-> **Status do projeto:** em desenvolvimento inicial. Atualmente, o repositório contém a base técnica em Expo/React Native e a estrutura planejada dos módulos. As funcionalidades de negócio descritas neste documento representam o escopo do MVP e ainda não estão disponíveis na tela inicial.
+O frontend realiza a comunicação com o backend do TIA por meio de uma camada de serviços responsável pelas requisições à API.
 
-## Sobre o projeto
+A configuração do endereço da API é realizada por meio da variável de ambiente:
 
-O TIA nasceu para resolver uma necessidade central: transformar observações do cotidiano escolar em um histórico organizado e fácil de consultar. O acompanhamento não é baseado apenas em notas; ele considera participação, atividades, compreensão de comandos, dificuldades, conquistas e outras observações relevantes.
-
-O fluxo principal do produto é:
-
-```text
-Professor
-   ↓
-Cria uma turma e cadastra os alunos
-   ↓
-Define as conquistas de aprendizagem esperadas
-   ↓
-Registra uma aula e os acontecimentos observados
-   ↓
-O sistema organiza os registros por aluno
-   ↓
-O professor consulta o histórico e acompanha a evolução
+```env
+EXPO_PUBLIC_API_URL=http://localhost:3000
 ```
 
-O princípio do MVP é simples: **registrar o que aconteceu, encontrar essa informação depois e acompanhar como o aluno está evoluindo**.
+O endereço deve ser ajustado conforme o ambiente de execução.
 
-## Escopo do MVP
+Em dispositivos físicos, deve ser utilizado o endereço IP da máquina que executa o backend, garantindo que ambos estejam acessíveis pela mesma rede.
 
-O produto foi planejado para oferecer:
+A aplicação também possui tratamento específico para os endereços de conexão utilizados em ambientes Web, Android e Expo.
 
-- cadastro e autenticação de professores;
-- criação e edição de turmas, com série, ano letivo, faixa etária, período e descrição;
-- cadastro manual de alunos e acesso ao perfil individual;
-- definição de conquistas de aprendizagem por turma ou série;
-- cadastro de aulas, conteúdos, atividades e conquistas trabalhadas;
-- registros de participação, realização de atividades, resposta a comandos, dificuldades, conquistas e observações livres;
-- histórico individual apresentado de forma cronológica;
-- visão das conquistas em diferentes estágios de desenvolvimento;
-- reunião dos registros da semana para apoiar o relatório semanal;
-- dashboard com resumo das turmas e acontecimentos recentes.
+A autenticação utiliza token armazenado localmente para manter a sessão do professor.
 
-### Situação atual da implementação
+## 🧩 Módulos da aplicação
 
-Neste momento, a aplicação exibe somente uma tela inicial de desenvolvimento. Ainda não há backend, banco de dados, autenticação, cadastro, importação ou persistência de informações implementados. Os diretórios em `src/features` reservam a organização dos módulos futuros.
+A aplicação está organizada em módulos que representam as principais funcionalidades do sistema.
 
-## Tecnologias
+### Turmas
 
-- [Expo](https://expo.dev/) SDK 58;
-- [React Native](https://reactnative.dev/) 0.88;
-- [React](https://react.dev/) 19;
-- [TypeScript](https://www.typescriptlang.org/) com modo estrito;
-- [Expo Router](https://docs.expo.dev/router/introduction/) para rotas baseadas em arquivos;
-- React Native Web para execução no navegador.
+Responsável pelo gerenciamento das turmas cadastradas pelo professor.
 
-## Scripts disponíveis
+Entre suas funcionalidades estão:
+
+- Listagem de turmas;
+- Cadastro e edição de turmas;
+- Visualização dos detalhes;
+- Consulta dos alunos vinculados;
+- Consulta das aulas relacionadas;
+- Filtros de turmas ativas e arquivadas;
+- Arquivamento e desarquivamento;
+- Exclusão de turmas com confirmação.
+
+### Alunos
+
+Responsável pelo cadastro e acompanhamento individual dos estudantes.
+
+O módulo contempla a organização das informações dos alunos e sua relação com as turmas.
+
+### Aulas
+
+Responsável pelo planejamento e acompanhamento das aulas.
+
+Entre suas funcionalidades estão:
+
+- Planejamento de aulas por turma, data e horário;
+- Registro do título e conteúdo trabalhado;
+- Cadastro de atividades planejadas;
+- Associação de conquistas de aprendizagem;
+- Edição das informações das aulas;
+- Acompanhamento do andamento;
+- Controle dos status de aula planejada, em andamento e concluída.
+
+### Conquistas
+
+Responsável pelo gerenciamento das conquistas de aprendizagem esperadas para os estudantes.
+
+O módulo permite relacionar habilidades e objetivos de aprendizagem às atividades e aulas planejadas.
+
+### Registros
+
+Responsável pela organização dos acontecimentos observados durante as aulas, incluindo participação, dificuldades, conquistas e outras observações relevantes.
+
+### Histórico
+
+Organiza as informações registradas ao longo do tempo, permitindo consultar o desenvolvimento individual dos estudantes.
+
+### Relatórios
+
+Previsto para reunir informações sobre o desenvolvimento dos alunos e apoiar o acompanhamento periódico realizado pelo professor.
+
+## 📊 Situação atual da implementação
+
+O frontend encontra-se em desenvolvimento, com integração progressiva aos serviços do backend.
+
+Atualmente, destacam-se:
+
+- Integração dos módulos de Turmas, Aulas e Conquistas com a API;
+- Comunicação com o backend por meio de serviços organizados;
+- Gerenciamento global de estados utilizando Context API;
+- Persistência do token de autenticação;
+- Listagem e gerenciamento de turmas;
+- Planejamento, edição e acompanhamento de aulas;
+- Associação de conquistas às aulas;
+- Organização da navegação entre os módulos.
+
+Os demais recursos continuam sendo desenvolvidos e aprimorados conforme a evolução do projeto.
+
+## 🗂️ Estrutura do projeto
+
+A aplicação utiliza uma organização modular, separando telas, componentes, serviços, contextos e funcionalidades.
+
+A estrutura principal é:
+
+```text
+tia-frontend/
+├── assets/                     # Imagens, ícones e recursos estáticos
+├── src/
+│   ├── app/                    # Rotas e telas do Expo Router
+│   ├── components/
+│   │   ├── layout/             # Componentes estruturais compartilhados
+│   │   └── ui/                 # Componentes visuais reutilizáveis
+│   ├── constants/              # Constantes da aplicação
+│   ├── contexts/               # Contextos globais do React
+│   ├── features/               # Módulos organizados por domínio
+│   │   ├── alunos/
+│   │   ├── aulas/
+│   │   ├── auth/
+│   │   ├── conquistas/
+│   │   ├── historico/
+│   │   ├── registros/
+│   │   ├── relatorios/
+│   │   └── turmas/
+│   ├── hooks/                  # Hooks compartilhados
+│   ├── services/               # Comunicação com APIs e serviços
+│   ├── theme/                  # Cores, tipografia e estilos
+│   ├── types/                  # Tipos e interfaces compartilhados
+│   └── utils/                  # Funções utilitárias
+├── .gitignore
+├── app.json                    # Configuração do Expo
+├── package.json                # Dependências e scripts npm
+├── package-lock.json           # Versões das dependências
+├── tsconfig.json               # Configuração do TypeScript
+└── README.md                   # Documentação do projeto
+```
+
+A organização permite separar responsabilidades e facilita a manutenção, evolução e implementação de novos módulos.
+
+## 🧭 Navegação e gerenciamento de estado
+
+O Expo Router é utilizado para organizar as rotas e a navegação da aplicação.
+
+Os contextos globais são organizados por responsabilidade, permitindo compartilhar informações entre diferentes telas e módulos.
+
+Entre os principais provedores estão:
+
+- AuthProvider;
+- TurmasProvider;
+- AlunosProvider;
+- ConquistasProvider;
+- AulasProvider.
+
+Essa organização facilita o compartilhamento de dados e a integração entre as funcionalidades da aplicação.
+
+## 📜 Scripts disponíveis
 
 | Comando | Finalidade |
-| --- | --- |
+|---|---|
 | `npm start` | Inicia o servidor de desenvolvimento do Expo. |
-| `npm run android` | Inicia o Expo e tenta abrir o app no Android. |
-| `npm run ios` | Inicia o Expo e tenta abrir o app no simulador iOS. |
-| `npm run web` | Inicia a versão web da aplicação. |
-| `npm run lint` | Inicia a análise estática do Expo; ainda requer a configuração inicial do ESLint. |
+| `npm run android` | Inicia a aplicação no Android. |
+| `npm run ios` | Inicia a aplicação no simulador iOS. |
+| `npm run web` | Inicia a versão Web. |
+| `npm run lint` | Executa a análise estática do projeto, conforme a configuração disponível. |
 
-O `package.json` ainda contém o script `reset-project`, herdado do template, mas o arquivo ao qual ele se refere não está presente. Portanto, esse comando não deve ser usado no estado atual do repositório.
+## 🧪 Verificações de desenvolvimento
 
-## Estrutura atual do projeto
-
-A estrutura existente no repositório é:
-
-```text
-tia-project-pi4/
-└── tia-app/
-    ├── .claude/                # Configurações locais de ferramentas
-    ├── .vscode/                # Recomendações e configurações do VS Code
-    ├── assets/                 # Ícones, splash screen e imagens estáticas
-    ├── node_modules/           # Dependências geradas pelo npm install
-    ├── src/
-    │   ├── app/                # Telas e rotas do Expo Router
-    │   │   ├── _layout.tsx     # Navegador raiz da aplicação
-    │   │   └── index.tsx       # Tela inicial atual
-    │   ├── components/
-    │   │   ├── layout/         # Componentes estruturais compartilhados
-    │   │   └── ui/             # Componentes visuais reutilizáveis
-    │   ├── constants/          # Constantes da aplicação
-    │   ├── contexts/           # Contextos globais do React
-    │   ├── features/           # Módulos organizados por domínio
-    │   │   ├── alunos/
-    │   │   ├── aulas/
-    │   │   ├── auth/
-    │   │   ├── conquistas/
-    │   │   ├── historico/
-    │   │   ├── registros/
-    │   │   ├── relatorios/
-    │   │   └── turmas/
-    │   ├── hooks/              # Hooks compartilhados
-    │   ├── services/           # Integrações, APIs e persistência
-    │   ├── theme/              # Cores, tipografia e tokens visuais
-    │   ├── types/              # Tipos e interfaces compartilhados
-    │   └── utils/              # Funções utilitárias
-    ├── .gitignore              # Arquivos ignorados pelo Git
-    ├── app.json                # Configuração do projeto Expo
-    ├── LICENSE                 # Licença do projeto
-    ├── package-lock.json       # Versões exatas das dependências
-    ├── package.json            # Dependências e scripts npm
-    ├── README.md               # Documentação do projeto
-    └── tsconfig.json           # TypeScript e aliases de importação
-```
-
-`node_modules` é criado automaticamente e não deve ser editado ou enviado ao Git. Os diretórios de arquitetura dentro de `src` já existem, mas, nesta fase, a maioria contém apenas arquivos `.gitkeep`. Eles serão preenchidos conforme o MVP for implementado.
-
-### Rotas e imports
-
-O Expo Router transforma arquivos de `src/app` em rotas. Atualmente:
-
-- `src/app/_layout.tsx` define o `Stack` de navegação principal;
-- `src/app/index.tsx` representa a rota inicial `/`.
-
-O TypeScript também disponibiliza o alias `@/` para `src/`. Por exemplo:
-
-```ts
-import { algumServico } from "@/services/algum-servico";
-```
-
-## Verificações de desenvolvimento
-
-Antes de enviar alterações, verifique os tipos:
+Antes de enviar alterações, recomenda-se executar a verificação de tipos do TypeScript:
 
 ```bash
 npx tsc --noEmit
 ```
 
-O script `npm run lint` já está declarado, mas o ESLint ainda não foi configurado. Na primeira execução, a CLI do Expo tentará instalar e criar essa configuração. Também ainda não existe uma suíte de testes automatizados no projeto.
+Também é importante verificar o funcionamento das telas e dos fluxos de navegação após cada alteração.
 
-## Solução de problemas
+## 🌿 Guia básico de Git
 
-### O Expo iniciou, mas alterações não aparecem
+O desenvolvimento utiliza branches para organizar funcionalidades e correções, evitando alterações diretas na branch principal.
 
-Limpe o cache do bundler e reinicie:
+### Atualizar a main
+
+Antes de iniciar uma nova tarefa:
 
 ```bash
-npx expo start --clear
+git switch main
+git pull origin main
 ```
 
-### O celular não consegue abrir o projeto
+### Criar uma branch
 
-- confirme que celular e computador estão na mesma rede;
-- verifique se o firewall permite a comunicação do Node.js/Expo;
-- confirme que o Expo Go instalado é compatível com o SDK utilizado pelo projeto;
-- no terminal do Expo, tente alterar o tipo de conexão disponível.
+Cada funcionalidade ou correção deve ser desenvolvida em uma branch própria.
 
-### O Android não abre
+```bash
+git switch -c nome-da-branch
+```
 
-Verifique se o Android Studio possui um dispositivo virtual configurado e iniciado e se as ferramentas do Android SDK estão acessíveis no ambiente.
+Exemplos:
 
-### O iOS não abre
+```bash
+git switch -c feature/modulo-alunos
+git switch -c feature/relatorios
+git switch -c fix/integracao-aulas
+git switch -c fix/autenticacao
+```
 
-O simulador de iOS exige macOS e Xcode. Em Windows ou Linux, use Android, Web ou um dispositivo físico compatível.
+### Verificar alterações
 
-## Evoluções futuras
+```bash
+git status
+```
 
-Depois que o fluxo principal estiver validado, os documentos funcionais preveem:
+### Adicionar alterações
 
-- importação de alunos por CSV ou XLSX, com confirmação antes da gravação;
-- registro por áudio, transcrição e revisão antes de salvar;
-- resumos e relatórios automáticos;
-- árvore visual de progresso;
-- notificações e sugestões de atividades;
-- acesso limitado para pais e responsáveis;
-- identificação de padrões e sugestões pedagógicas com inteligência artificial.
+```bash
+git add .
+```
 
-A inteligência artificial será uma ferramenta de apoio: ela poderá organizar, resumir e sugerir, mas a interpretação e as decisões continuarão sob responsabilidade do professor. Da mesma forma, registros internos não deverão ser compartilhados automaticamente com responsáveis.
+### Criar um commit
 
-## Privacidade
+```bash
+git commit -m "feat: descrição da alteração"
+```
 
-Como a plataforma lidará com dados de estudantes, a implementação deve aplicar controle de acesso, coleta mínima de dados, armazenamento seguro e regras claras de compartilhamento. Dados reais de alunos não devem ser incluídos no repositório, em exemplos públicos ou em registros de depuração.
+Prefixos recomendados:
 
-## Licença
+| Prefixo | Finalidade |
+|---|---|
+| `feat` | Nova funcionalidade |
+| `fix` | Correção de problema |
+| `docs` | Documentação |
+| `refactor` | Refatoração |
+| `style` | Formatação |
+| `test` | Testes |
 
-Este repositório inclui uma licença MIT. Consulte o arquivo [LICENSE](./LICENSE) para conhecer os termos.
+Exemplos:
+
+```bash
+git commit -m "feat: integra modulo de turmas com backend"
+
+git commit -m "fix: corrige persistencia das aulas"
+
+git commit -m "refactor: reorganiza contexto de alunos"
+
+git commit -m "docs: atualiza README"
+```
+
+### Enviar uma branch
+
+Na primeira vez:
+
+```bash
+git push -u origin nome-da-branch
+```
+
+Depois de configurar a branch:
+
+```bash
+git push
+```
+
+Após o envio, deverá ser criado um Pull Request (PR) no GitHub para revisão e integração das alterações na branch principal.
+
+## 🔄 Fluxo básico de desenvolvimento
+
+O fluxo recomendado para o desenvolvimento é:
+
+**Antes de iniciar:**
+
+```bash
+git switch main
+git pull origin main
+git switch -c feature/nome-da-feature
+```
+
+**Depois de desenvolver:**
+
+```bash
+git status
+git add .
+git commit -m "feat: descrição da alteração"
+git push -u origin feature/nome-da-feature
+```
+
+Depois, abra um Pull Request no GitHub.
+
+## ⚠️ Boas práticas
+
+- Evite realizar alterações diretamente na `main`.
+- Utilize branches para cada funcionalidade ou correção.
+- Mantenha os componentes reutilizáveis.
+- Separe as responsabilidades entre telas, contextos e serviços.
+- Utilize TypeScript para manter a tipagem do projeto.
+- Evite duplicação de código.
+- Verifique a integração com o backend antes de enviar alterações.
+- Não envie arquivos de configuração local ou credenciais ao repositório.
+- Não versione a pasta `node_modules`.
+
+## 🔮 Evoluções futuras
+
+Entre as evoluções previstas para o TIA estão:
+
+- Aprimoramento do histórico individual dos estudantes;
+- Relatórios periódicos de desenvolvimento;
+- Importação de alunos por CSV ou XLSX;
+- Registro por áudio, com transcrição e revisão;
+- Resumos automáticos;
+- Visualização gráfica da evolução das conquistas;
+- Notificações e sugestões de atividades;
+- Acesso limitado para pais e responsáveis;
+- Identificação de padrões e sugestões pedagógicas com inteligência artificial.
+
+A inteligência artificial será uma ferramenta de apoio ao professor, podendo organizar informações, elaborar resumos e sugerir atividades. A interpretação dos dados e as decisões pedagógicas continuarão sob responsabilidade do professor.
+
+## 🔐 Privacidade e segurança
+
+Como a plataforma trabalha com informações relacionadas a estudantes, o desenvolvimento deve considerar:
+
+- Controle de acesso às informações;
+- Coleta mínima de dados;
+- Armazenamento seguro;
+- Proteção dos dados pessoais;
+- Regras claras de compartilhamento;
+- Restrição de acesso a informações individuais.
+
+Dados reais de alunos não devem ser incluídos no repositório, em exemplos públicos ou em registros de depuração.
+
+## 🎓 Contexto acadêmico
+
+O TIA é um projeto acadêmico desenvolvido inicialmente na disciplina de Projeto Integrador IV (PI 4).
+
+A aplicação frontend é parte da solução, trabalhando em conjunto com o backend para oferecer uma plataforma de acompanhamento do desenvolvimento individual dos estudantes.
+
+O projeto busca contribuir para a organização do trabalho docente, oferecendo ferramentas que auxiliem no registro, consulta e acompanhamento contínuo da aprendizagem.
+
+## 📄 Licença
+
+Este projeto inclui uma licença MIT. Consulte o arquivo `LICENSE` para conhecer os termos de utilização.
